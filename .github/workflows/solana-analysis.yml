@@ -1,0 +1,43 @@
+name: Solana Analysis Bot
+
+on:
+  # Run every hour at minute 0
+  schedule:
+    - cron: '0 * * * *'
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  run-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (package/dependency manager)
+        run: |
+          pip install --upgrade pip
+          pip install uv
+
+      - name: Install project dependencies
+        run: |
+          uv pip install -r requirements.txt
+
+      - name: Run o3 Enhanced Solana Analysis
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python o3_enhanced_solana_agent.py
+
+      - name: Upload generated analysis artefact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: o3_enhanced_analysis
+          path: o3_enhanced_analysis.json
+
