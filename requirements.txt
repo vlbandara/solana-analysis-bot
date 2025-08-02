@@ -1,0 +1,10 @@
+ccxt>=4.4.97
+openai>=1.98.0
+requests>=2.32.4
+yfinance>=0.2.65
+solana>=0.34.2
+numpy>=1.24.0
+python-dotenv>=1.0.0
+selenium>=4.0.0
+webdriver-manager>=4.0.0
+schedule>=1.2.0

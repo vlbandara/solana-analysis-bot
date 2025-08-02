@@ -1,0 +1,138 @@
+{
+  "model_used": "o3",
+  "analysis": "```\n\ud83d\udd14 SOL HOURLY BRIEF\n\nLogic:\n\u2022 Orderflow: 6.4\u00d7 bid/ask depth & 137\u00d7 B/S flow show aggressive dip-buying near $165-167\n\u2022 Technical: MACD bullish div but still sub-zero; RSI 42.6 suggests room up; price hugging VWAP\n\u2022 Derivatives/Funding: OI elevated, L/S 2.9 \u2192 long-crowded; flat funding masks squeeze risk\n# Liquidation bullet point removed per user request\n\u2022 On-chain: normal whale activity; flows neutral\n\u2022 Risk/opp: strong bids & bullish div favor bounce to $170, but crowded longs could spur whipsaw\n\nLong holders: Guard profits with tight stops; crowded longs make flash wicks likely \ud83d\udcc9\n\nShort holders: Fade rallies only near $170+; beware bid wall at $165 and rising momentum\n\nEntry hunters: Watch $164.6-165.2 support cluster for low-risk entries; cut if $164 cracks\n\n5-min scalp: LONG $165.40\u2192$168.90 | SL $164.20 (risk: deep bid stack + bullish div near support)\n\nNote: Volume 27.7\u00d7 avg adds conviction; expect fast moves once $170 liquidity is tested\n```",
+  "raw_data": {
+    "price": {
+      "current_price": 166.77,
+      "market_cap": 89905603608,
+      "volume_24h": 6031660143,
+      "price_change_24h": -5.87519,
+      "price_change_7d": -7.65471,
+      "price_change_30d": 11.79773,
+      "high_24h": 179.17,
+      "low_24h": 165.43,
+      "ath": 293.31,
+      "atl": 0.500801,
+      "market_cap_rank": 6,
+      "circulating_supply": 538166468.700359,
+      "total_supply": 606470571.2348989
+    },
+    "exchange": {
+      "price": 167.45,
+      "volume": 3841480.995,
+      "volume_ratio": 27.70373745734125,
+      "bid": 167.45,
+      "ask": 167.46,
+      "high": 179.77,
+      "low": 164.58,
+      "change_percent": -5.154,
+      "bid_ask_spread": 0.010000000000019327,
+      "bid_depth_5": 4449.471,
+      "ask_depth_5": 697.6,
+      "orderbook_ratio": 6.378255447247706,
+      "buy_sell_ratio": 137.5200205338809,
+      "recent_vwap": 167.4219921285813,
+      "price_vs_vwap": 0.016728908229194733,
+      "trade_aggression": "buy-heavy",
+      "rsi_14": 42.64285714285714,
+      "ohlcv_1h_recent": [
+        [
+          1754049600000,
+          169.19,
+          170.35,
+          168.37,
+          169.02,
+          144056.072
+        ],
+        [
+          1754053200000,
+          169.02,
+          169.8,
+          164.84,
+          165.67,
+          234824.705
+        ],
+        [
+          1754056800000,
+          165.66,
+          167.48,
+          164.58,
+          167.48,
+          126911.503
+        ]
+      ],
+      "total_trades": 20
+    },
+    "derivatives": {
+      "open_interest": 9213494.17,
+      "long_short_ratio": 2.9063,
+      "long_account_percent": 0.744,
+      "short_account_percent": 0.256,
+      "funding_rate": 2.67e-05,
+      "funding_rate_annual": 0.0292365,
+      "long_short_trend": [
+        {
+          "symbol": "SOLUSDT",
+          "longAccount": "0.7440",
+          "longShortRatio": "2.9063",
+          "shortAccount": "0.2560",
+          "timestamp": 1753660800000
+        },
+        {
+          "symbol": "SOLUSDT",
+          "longAccount": "0.7465",
+          "longShortRatio": "2.9448",
+          "shortAccount": "0.2535",
+          "timestamp": 1753747200000
+        },
+        {
+          "symbol": "SOLUSDT",
+          "longAccount": "0.7646",
+          "longShortRatio": "3.2481",
+          "shortAccount": "0.2354",
+          "timestamp": 1753833600000
+        }
+      ]
+    },
+    "sentiment": {
+      "fear_greed_current": 65,
+      "fear_greed_classification": "Greed",
+      "fear_greed_yesterday": null,
+      "fear_greed_week_ago": null
+    },
+    "technical": {
+      "current_price": 167.48,
+      "ma_20": 170.239,
+      "ma_50": 175.45140000000004,
+      "price_vs_ma20": -1.6206627153590039,
+      "price_vs_ma50": -4.54336642511832,
+      "recent_high": 170.35,
+      "recent_low": 164.58,
+      "avg_volume_10": 138662.9151,
+      "current_volume": 126911.503,
+      "volume_ratio": 0.9152519468415531,
+      "macd": {
+        "macd": -2.470453115287171,
+        "signal": -2.410428712765603,
+        "histogram": -0.06002440252156793,
+        "trend": "bullish"
+      },
+      "pattern": {
+        "pattern": "no_clear_pattern",
+        "strength": 0
+      },
+      "divergence_check": "bullish"
+    },
+    "onchain": {
+      "current_slot": 357178282,
+      "epoch": 826,
+      "total_supply_sol": 606470563.8775815,
+      "network_stats": {},
+      "whale_activity_indicator": "normal",
+      "exchange_flow_direction": "neutral",
+      "data_source": "solana_rpc_basic"
+    },
+    "timestamp": "2025-08-01T19:50:29.394774"
+  },
+  "timestamp": "2025-08-01T19:50:53.531267"
+}
