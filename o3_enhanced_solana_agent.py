@@ -162,6 +162,16 @@ class O3SolanaAgent:
         """Send comprehensive data to o3 model for advanced analysis"""
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
+        # Extract technical-related values early to avoid UnboundLocal errors
+        technical_macd = data['technical'].get('macd', {}) if data['technical'] else {}
+        macd_value = technical_macd.get('macd', 0)
+        macd_signal = technical_macd.get('signal', 0)
+        macd_trend = technical_macd.get('trend', 'neutral')
+
+        technical_pattern = data['technical'].get('pattern', {}) if data['technical'] else {}
+        pattern_name = technical_pattern.get('pattern', 'none')
+        pattern_strength = technical_pattern.get('strength', 0)
+
         # SAFE CAST helper to avoid formatting NoneType errors
         def _sf(val, default=0.0):
             try:
