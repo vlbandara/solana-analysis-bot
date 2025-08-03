@@ -13,8 +13,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,7 +26,7 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          uv pip install -r solana-analysis/requirements.txt
+          uv pip install -r requirements.txt
 
       - name: Run o3 Enhanced Solana Analysis
         env:
