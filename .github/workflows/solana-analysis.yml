@@ -26,7 +26,7 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          uv pip install -r requirements.txt
+          uv pip install -r solana-analysis/requirements.txt
 
       - name: Run o3 Enhanced Solana Analysis
         env:
