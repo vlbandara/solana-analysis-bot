@@ -66,7 +66,16 @@ class O3SolanaAgent:
             print(f"   ✅ Exchange data: Bid/Ask ${exchange_data['bid']:.2f}/${exchange_data['ask']:.2f}")
         except Exception as e:
             print(f"   ❌ Exchange data error: {e}")
-            exchange_data = None
+            exchange_data = {
+                'price': 0.0,
+                'volume': 0.0,
+                'bid': 0.0,
+                'ask': 0.0,
+                'high': 0.0,
+                'low': 0.0,
+                'change_percent': 0.0,
+                'bid_ask_spread': 0.0
+            }
         
         # Derivatives data
         try:
@@ -100,7 +109,15 @@ class O3SolanaAgent:
             print(f"   ✅ Derivatives: OI {derivatives_data['open_interest']:,.0f} SOL, L/S {derivatives_data['long_short_ratio']:.2f}")
         except Exception as e:
             print(f"   ❌ Derivatives error: {e}")
-            derivatives_data = None
+            derivatives_data = {
+                'open_interest': 0.0,
+                'long_short_ratio': 0.0,
+                'long_account_percent': 0.0,
+                'short_account_percent': 0.0,
+                'funding_rate': 0.0,
+                'funding_rate_annual': 0.0,
+                'long_short_trend': [{'longShortRatio': '0.0'}, {'longShortRatio': '0.0'}, {'longShortRatio': '0.0'}]
+            }
         
         # Fear & Greed
         try:
@@ -117,7 +134,12 @@ class O3SolanaAgent:
             print(f"   ✅ Sentiment: F&G {sentiment_data['fear_greed_current']} ({sentiment_data['fear_greed_classification']})")
         except Exception as e:
             print(f"   ❌ Sentiment error: {e}")
-            sentiment_data = None
+            sentiment_data = {
+                'fear_greed_current': 50,
+                'fear_greed_classification': 'Neutral',
+                'fear_greed_yesterday': None,
+                'fear_greed_week_ago': None
+            }
         
         # Technical indicators (simplified)
         try:
@@ -428,9 +450,9 @@ def run_o3_enhanced_analysis():
     print(f"\n📊 Data collection complete!")
     print(f"💰 SOL Price: ${data['price']['current_price']:.2f}")
     print(f"📈 24h Change: {data['price']['price_change_24h']:.2f}%")
-    print(f"📊 Open Interest: {data['derivatives']['open_interest']:,.0f} SOL")
-    print(f"⚖️ Long/Short: {data['derivatives']['long_short_ratio']:.2f}")
-    print(f"😨 Fear & Greed: {data['sentiment']['fear_greed_current']} ({data['sentiment']['fear_greed_classification']})")
+    print(f"📊 Open Interest: {data.get('derivatives', {}).get('open_interest', 0):,.0f} SOL")
+    print(f"⚖️ Long/Short: {data.get('derivatives', {}).get('long_short_ratio', 0):.2f}")
+    print(f"😨 Fear & Greed: {data.get('sentiment', {}).get('fear_greed_current', 0)} ({data.get('sentiment', {}).get('fear_greed_classification', 'Unknown')})")
     
     # Analyze with o3
     analysis, model_used = agent.analyze_with_o3(data)
