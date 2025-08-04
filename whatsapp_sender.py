@@ -51,7 +51,7 @@ class WhatsAppSender:
 
     
 
-    def send_message(self, message: str) -> bool:
+    def send_message(self, message: str, template_vars: dict | None = None) -> bool:
         """Send message to WhatsApp"""
         print("🔍 DEBUG: Attempting to send WhatsApp message...")
         if not self.client:
@@ -61,11 +61,24 @@ class WhatsAppSender:
         try:
             print(f"🔍 DEBUG: Sending to: whatsapp:{self.to_number}")
             print(f"🔍 DEBUG: From: whatsapp:{self.from_number}")
-            message = self.client.messages.create(
-                from_=f'whatsapp:{self.from_number}',
-                body=message,
-                to=f'whatsapp:{self.to_number}'
-            )
+            from_param = f'whatsapp:{self.from_number}'
+            to_param   = f'whatsapp:{self.to_number}'
+            template_sid = os.getenv('TWILIO_TEMPLATE_SID')
+            if template_sid:
+                import json as _json
+                print(f"🔍 DEBUG: Using template SID {template_sid}")
+                message = self.client.messages.create(
+                    from_=from_param,
+                    to=to_param,
+                    content_sid=template_sid,
+                    content_variables=_json.dumps(template_vars or {})
+                )
+            else:
+                message = self.client.messages.create(
+                    from_=from_param,
+                    body=message,
+                    to=to_param
+                )
             print(f"✅ Twilio accepted message: {message.sid}. Checking delivery status …")
             try:
                 # poll up to ~20 s for delivered/failed
