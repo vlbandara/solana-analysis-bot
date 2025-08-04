@@ -480,16 +480,28 @@ def run_o3_enhanced_analysis():
         json.dump(results, f, indent=2)
     
 
+
     print("\n💾 Full analysis saved to o3_enhanced_analysis.json")
     
     # 🆕 WHATSAPP INTEGRATION
     print("\n📱 Sending analysis to WhatsApp group...")
+    print("🔍 DEBUG: Checking if analysis file exists...")
+    import os
+    if os.path.exists('o3_enhanced_analysis.json'):
+        print("✅ DEBUG: Analysis file found")
+        print("🔍 DEBUG: File size:", os.path.getsize('o3_enhanced_analysis.json'), "bytes")
+    else:
+        print("❌ DEBUG: Analysis file not found!")
+    
+    print("🔍 DEBUG: About to call send_analysis_to_whatsapp...")
     whatsapp_success = send_analysis_to_whatsapp('o3_enhanced_analysis.json')
+    print(f"🔍 DEBUG: WhatsApp result: {whatsapp_success}")
     
     if whatsapp_success:
         print("✅ WhatsApp integration successful!")
     else:
         print("⚠️ WhatsApp integration failed - check credentials")
+
     
     return results
 
