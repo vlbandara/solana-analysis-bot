@@ -494,7 +494,12 @@ def run_o3_enhanced_analysis():
         print("❌ DEBUG: Analysis file not found!")
     
     print("🔍 DEBUG: About to call send_analysis_to_whatsapp...")
-    whatsapp_success = send_analysis_to_whatsapp('o3_enhanced_analysis.json')
+    should_send = os.getenv('AUTO_SEND_TO_WHATSAPP', 'true').lower() == 'true'
+    if should_send:
+        whatsapp_success = send_analysis_to_whatsapp('o3_enhanced_analysis.json')
+    else:
+        print('ℹ️ AUTO_SEND_TO_WHATSAPP is disabled; skipping send.')
+        whatsapp_success = False
     print(f"🔍 DEBUG: WhatsApp result: {whatsapp_success}")
     
     if whatsapp_success:

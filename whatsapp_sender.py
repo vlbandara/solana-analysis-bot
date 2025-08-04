@@ -30,7 +30,7 @@ class WhatsAppSender:
         print("🔍 DEBUG: Initializing WhatsApp sender...")
         self.account_sid = os.getenv('TWILIO_ACCOUNT_SID')
         self.auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-        self.from_number = os.getenv('TWILIO_WHATSAPP_FROM')
+        self.from_number = os.getenv('TWILIO_WHATSAPP_FROM') or os.getenv('TWILIO_WHATSAPP_NUMBER')
         self.to_number = os.getenv('WHATSAPP_TO_NUMBER')
         
         print(f"🔍 DEBUG: Account SID: {'✅ Set' if self.account_sid else '❌ Missing'}")
