@@ -10,6 +10,7 @@ from datetime import datetime
 import ccxt
 from openai import OpenAI
 import json
+from whatsapp_sender import send_analysis_to_whatsapp
 
 class O3SolanaAgent:
     def __init__(self):
@@ -478,9 +479,20 @@ def run_o3_enhanced_analysis():
     with open('o3_enhanced_analysis.json', 'w') as f:
         json.dump(results, f, indent=2)
     
+
     print("\n💾 Full analysis saved to o3_enhanced_analysis.json")
     
+    # 🆕 WHATSAPP INTEGRATION
+    print("\n📱 Sending analysis to WhatsApp group...")
+    whatsapp_success = send_analysis_to_whatsapp('o3_enhanced_analysis.json')
+    
+    if whatsapp_success:
+        print("✅ WhatsApp integration successful!")
+    else:
+        print("⚠️ WhatsApp integration failed - check credentials")
+    
     return results
+
 
 if __name__ == "__main__":
     result = run_o3_enhanced_analysis()
