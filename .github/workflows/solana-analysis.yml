@@ -28,7 +28,8 @@ jobs:
         run: |
           uv sync
 
-      - name: Run o3 Enhanced Solana Analysis
+
+      - name: Test WhatsApp Integration
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
@@ -36,7 +37,10 @@ jobs:
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
         run: |
-          uv run python o3_enhanced_solana_agent.py
+          uv run python test_whatsapp.py
+
+      - name: Run o3 Enhanced Solana Analysis
+
 
       - name: Upload generated analysis artefact
         if: success()
