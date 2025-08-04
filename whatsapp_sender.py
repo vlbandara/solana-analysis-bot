@@ -66,8 +66,25 @@ class WhatsAppSender:
                 body=message,
                 to=f'whatsapp:{self.to_number}'
             )
-            print(f"✅ WhatsApp message sent: {message.sid}")
-            return True
+            print(f"✅ Twilio accepted message: {message.sid}. Checking delivery status …")
+            try:
+                # poll up to ~20 s for delivered/failed
+                import time
+                for _ in range(10):
+                    status = self.client.messages(message.sid).fetch().status
+                    print(f"   ↪ current status: {status}")
+                    if status in {"delivered","failed","undelivered"}:
+                        break
+                    time.sleep(2)
+                if status == "delivered":
+                    print("✅ WhatsApp reports DELIVERED")
+                    return True
+                else:
+                    print(f"⚠️ Message not delivered (final status: {status}). Check opt-in / template / sandbox join.")
+                    return False
+            except Exception as ex:
+                print(f"⚠️ Could not verify delivery status: {ex}")
+                return True
         except TwilioException as e:
             print(f"❌ Twilio error: {e}")
             return False
