@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Install uv (package/dependency manager)
         run: |
@@ -26,13 +26,13 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          uv pip install -r requirements.txt
+          uv sync
 
       - name: Run o3 Enhanced Solana Analysis
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          python o3_enhanced_solana_agent.py
+          uv run python o3_enhanced_solana_agent.py
 
       - name: Upload generated analysis artefact
         if: success()

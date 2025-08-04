@@ -181,7 +181,9 @@ class O3SolanaAgent:
         
         # Coerce key numeric fields from data dicts
         for key_path in [
-            ('price','current_price'), ('price','price_change_24h'),
+            ('price','current_price'), ('price','price_change_24h'), ('price','price_change_7d'), ('price','price_change_30d'),
+            ('price','market_cap'), ('price','volume_24h'), ('price','low_24h'), ('price','high_24h'),
+            ('price','ath'), ('price','atl'), ('price','circulating_supply'), ('price','total_supply'),
             ('derivatives','open_interest'), ('derivatives','long_short_ratio'),
             ('derivatives','funding_rate'), ('derivatives','funding_rate_annual'),
         ]:
@@ -197,12 +199,27 @@ class O3SolanaAgent:
                 pass
 
         # Ensure all major data sections exist with safe defaults to avoid NoneType formatting errors
+        data['price'] = data.get('price') or {}
         data['exchange'] = data.get('exchange') or {}
         data['technical'] = data.get('technical') or {}
         data['derivatives'] = data.get('derivatives') or {}
         data['sentiment'] = data.get('sentiment') or {}
 
         # Provide default values for any missing fields referenced in the prompt
+        data['price'].setdefault('current_price', 0.0)
+        data['price'].setdefault('market_cap', 0.0)
+        data['price'].setdefault('market_cap_rank', '0')
+        data['price'].setdefault('volume_24h', 0.0)
+        data['price'].setdefault('low_24h', 0.0)
+        data['price'].setdefault('high_24h', 0.0)
+        data['price'].setdefault('price_change_24h', 0.0)
+        data['price'].setdefault('price_change_7d', 0.0)
+        data['price'].setdefault('price_change_30d', 0.0)
+        data['price'].setdefault('ath', 0.0)
+        data['price'].setdefault('atl', 0.0)
+        data['price'].setdefault('circulating_supply', 0.0)
+        data['price'].setdefault('total_supply', 0.0)
+
         data['exchange'].setdefault('price', 0.0)
         data['exchange'].setdefault('bid', 0.0)
         data['exchange'].setdefault('ask', 0.0)
@@ -238,6 +255,8 @@ class O3SolanaAgent:
         data['sentiment'].setdefault('fear_greed_yesterday', 'N/A')
         data['sentiment'].setdefault('fear_greed_week_ago', 'N/A')
 
+
+        
         # Create ultra-comprehensive prompt for o3
         prompt = f"""
         COMPREHENSIVE SOLANA (SOL) ANALYSIS - FULL o3 MODEL CAPABILITIES
@@ -250,7 +269,7 @@ class O3SolanaAgent:
         
         💰 PRICE METRICS:
         • Current Price: ${data['price']['current_price']:.2f}
-        • Market Cap: ${data['price']['market_cap']:,.0f} (Rank #{data['price']['market_cap_rank']})
+        • Market Cap: ${data['price']['market_cap']:,.0f} (Rank #{str(data['price']['market_cap_rank'])})
         • 24h Volume: ${data['price']['volume_24h']:,.0f}
         • 24h Range: ${data['price']['low_24h']:.2f} - ${data['price']['high_24h']:.2f}
         • Price Changes: 24h ({data['price']['price_change_24h']:.2f}%) | 7d ({data['price']['price_change_7d']:.2f}%) | 30d ({data['price']['price_change_30d']:.2f}%)
@@ -258,7 +277,7 @@ class O3SolanaAgent:
         • Supply: {data['price']['circulating_supply']:,.0f} / {data['price']['total_supply']:,.0f} SOL
         
         📊 EXCHANGE MICROSTRUCTURE (Binance):
-        • Live Price: ${data['exchange']['price'] if data['exchange'] else 'N/A'}
+        • Live Price: ${data['exchange']['price']:.2f}
         • Bid/Ask: ${data['exchange']['bid']:.2f} / ${data['exchange']['ask']:.2f} (Spread: ${data['exchange']['bid_ask_spread']:.3f})
         • 24h Volume: {data['exchange']['volume']:,.0f} SOL
         • Volume Ratio: {data['technical']['volume_ratio']:.2f}x average
@@ -268,11 +287,11 @@ class O3SolanaAgent:
         • Long/Short Ratio: {data['derivatives']['long_short_ratio']:.2f}
         • Account Distribution: {data['derivatives']['long_account_percent']:.1f}% Long | {data['derivatives']['short_account_percent']:.1f}% Short
         • Funding Rate: {data['derivatives']['funding_rate']:.6f} ({data['derivatives']['funding_rate_annual']:.1f}% annualized)
-        • L/S Trend: {data['derivatives']['long_short_trend'][0]['longShortRatio']:.2f} → {data['derivatives']['long_short_trend'][1]['longShortRatio']:.2f} → {data['derivatives']['long_short_trend'][2]['longShortRatio']:.2f}
+        • L/S Trend: {float(data['derivatives']['long_short_trend'][0]['longShortRatio']):.2f} → {float(data['derivatives']['long_short_trend'][1]['longShortRatio']):.2f} → {float(data['derivatives']['long_short_trend'][2]['longShortRatio']):.2f}
         
         😱 MARKET SENTIMENT:
         • Fear & Greed Index: {data['sentiment']['fear_greed_current']}/100 ({data['sentiment']['fear_greed_classification']})
-        • Trend: Yesterday {data['sentiment']['fear_greed_yesterday']} | Week Ago {data['sentiment']['fear_greed_week_ago']}
+        • Trend: Yesterday {data['sentiment']['fear_greed_yesterday'] or 'N/A'} | Week Ago {data['sentiment']['fear_greed_week_ago'] or 'N/A'}
         
         📊 TECHNICAL INDICATORS:
         • Price vs MA20: {data['technical']['price_vs_ma20']:.2f}%
