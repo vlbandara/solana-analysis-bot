@@ -344,37 +344,38 @@ class SingleO3SolanaAgent:
         • OI Flow: {patterns.get('open_interest', {}).get('trend', 'unknown')} with {patterns.get('open_interest', {}).get('momentum_change_pct', 0):+.1f}% momentum
         
         ═══════════════════════════════════════════════════════════════════════════════
-        🧠 O3 ANALYSIS REQUIREMENTS
+        🧠 O3 ANALYSIS REQUIREMENTS - WHATSAPP FORMAT
         ═══════════════════════════════════════════════════════════════════════════════
         
-        Use your superior reasoning to analyze ALL this data comprehensively. Provide:
+        CRITICAL: This analysis is for WHATSAPP delivery to SOL traders. Keep it EXTREMELY CONCISE.
         
-        🎯 BIAS: BULLISH / BEARISH / NEUTRAL / UNCLEAR
-        - Only choose BULLISH/BEARISH if evidence strongly supports it
-        - Use UNCLEAR if patterns conflict or data is insufficient
+        FORMAT REQUIREMENTS:
+        • Total response must be under 400 characters
+        • Use bullet points and short sentences
+        • Focus only on actionable insights for traders already in SOL positions
         
-        📊 KEY INSIGHT: What is the MOST significant pattern or change in this data? 
-        - Focus on relationships between metrics (OI vs L/S, funding vs positioning, etc.)
-        - Explain what this reveals about institutional vs retail behavior
-        - Identify any divergences or unusual patterns
+        Provide ONLY these 4 sections:
         
-        ⚠️ TOP RISK: Based on current positioning and patterns, what's the highest probability risk scenario?
-        - Consider liquidation cascades, funding squeezes, positioning reversals
-        - Provide specific price levels where risks materialize
+        🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR] - one word only
         
-        💡 ACTION: Specific, actionable recommendation with:
-        - Entry strategy and price levels
-        - Risk management (stop loss, position sizing)
-        - Time horizon and key levels to monitor
+        📊 KEY INSIGHT: [1-2 sentences max about most important pattern]
         
-        CRITICAL INSTRUCTIONS:
-        • Analyze the RELATIONSHIPS between metrics, not just individual values
-        • Focus on what has CHANGED and what it means for market dynamics
-        • Consider both immediate (1h) and broader (24h) patterns
-        • Be specific with price levels and risk management
-        • If evidence conflicts, clearly state UNCLEAR bias and explain why
+        ⚠️ TOP RISK: [1 sentence about key risk level]
         
-        This is professional derivatives analysis - be precise, insightful, and actionable.
+        💡 ACTION: [1-2 sentences with specific price levels]
+        
+        MANDATORY CONSTRAINTS:
+        • Each section maximum 80 characters
+        • No explanations of basic concepts
+        • No detailed analysis - traders already understand derivatives
+        • Focus on ACTIONABLE price levels and immediate risks
+        • Use abbreviations where possible (L/S, OI, etc.)
+        
+        EXAMPLE FORMAT:
+        🎯 BIAS: UNCLEAR
+        📊 KEY INSIGHT: L/S diverging from funding - retail long vs institutional short
+        ⚠️ TOP RISK: Long squeeze if >$170, cascade if <$163  
+        💡 ACTION: Wait for $170 break or $163 defense, tight stops
         """
         
         try:
@@ -384,14 +385,14 @@ class SingleO3SolanaAgent:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an elite institutional derivatives trader and quantitative analyst with 25+ years of experience. You excel at synthesizing complex market data into actionable insights. You specialize in pattern recognition, market microstructure, positioning analysis, and risk assessment. Use your superior reasoning capabilities to provide institutional-grade analysis that identifies subtle market dynamics and regime changes."
+                        "content": "You are an elite derivatives trader providing CONCISE WhatsApp alerts to professional SOL traders. Your responses must be under 400 characters total. Focus only on actionable price levels and immediate risks. No explanations - traders already understand derivatives. Be extremely concise and structured."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                max_completion_tokens=2000
+                max_completion_tokens=300  # Concise WhatsApp format
             )
             
             return response.choices[0].message.content
@@ -400,12 +401,12 @@ class SingleO3SolanaAgent:
             return f"❌ O3 analysis failed: {e}"
     
     def format_for_whatsapp(self, analysis: str, data: Dict[str, Any]) -> str:
-        """Format analysis for WhatsApp delivery"""
-        header = f"🎯 SOL DERIVATIVES • {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
-        header += f"📊 ${data.get('current_price', 0):.2f} | OI: ${data.get('open_interest_usd', 0)/1e6:.1f}M ({data.get('oi_change_24h_pct', 0):+.1f}% 24h)\n"
-        header += f"💸 Funding: {data.get('funding_rate_pct', 0):.4f}% | L/S: {data.get('current_ls_ratio', 0):.2f}\n\n"
+        """Format concise analysis for WhatsApp delivery"""
+        header = f"🎯 SOL • {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n"
+        header += f"📊 ${data.get('current_price', 0):.2f} | OI: ${data.get('open_interest_usd', 0)/1e6:.1f}M\n"
+        header += f"💸 {data.get('funding_rate_pct', 0):.3f}% | L/S: {data.get('current_ls_ratio', 0):.2f}\n\n"
         
-        footer = "\n\n📈 Coinalyze + o3"
+        footer = "\n📈 o3"
         
         return header + analysis + footer
 
