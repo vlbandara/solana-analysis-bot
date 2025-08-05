@@ -313,82 +313,43 @@ class EnhancedSolanaWorkflow:
         prices = derivatives_data["prices"]
         correlations = derivatives_data["correlations"]
         
-        # Create comprehensive derivatives-focused prompt
+        # Create focused, concise prompt for WhatsApp-friendly analysis
         prompt = f"""
-You are an expert derivatives analyst providing directional advice to SOL position holders. 
-Analyze this 7-day SOL derivatives data and identify patterns, correlations, and risks.
+You are an expert derivatives analyst. Provide CONCISE analysis for SOL position holders via WhatsApp.
 
-🔍 DERIVATIVES METRICS (7-day data):
+KEY DATA:
+OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change'])} 24h)
+Funding: {self._fmt_percentage(funding['current'], 4)} (ann: {self._fmt_percentage(funding['annualized_current'], 2)})
+L/S Ratio: {self._fmt_ratio(ls_ratio['current'])} (avg: {self._fmt_ratio(ls_ratio['7d_avg'])})
+Liquidations: {self._fmt_usd(liq['longs_24h'])}L / {self._fmt_usd(liq['shorts_24h'])}S
+Basis: {self._fmt_percentage(prices['basis_current'], 3)} (ann: {self._fmt_percentage(prices['basis_annualized'], 1)})
+Correlations: OI-Funding {correlations['oi_funding']:.2f}, OI-L/S {correlations['oi_ls_ratio']:.2f}
 
-📊 OPEN INTEREST:
-- Current: {self._fmt_usd(oi['current'])}
-- 24h Change: {self._fmt_usd(oi['24h_change'])}
-- 7d Change: {self._fmt_usd(oi['7d_change'])}
-- 7d Range: {self._fmt_usd(oi['7d_min'])} - {self._fmt_usd(oi['7d_max'])}
+Provide SHARP analysis (max 200 words total):
 
-💸 FUNDING RATE:
-- Current: {self._fmt_percentage(funding['current'], 4)} ({self._fmt_percentage(funding['annualized_current'], 2)} ann.)
-- 24h Change: {funding['24h_change']*100:+.4f}%
-- 7d Average: {self._fmt_percentage(funding['7d_avg'], 4)}
-- 7d Range: {self._fmt_percentage(funding['7d_min'], 4)} - {self._fmt_percentage(funding['7d_max'], 4)}
+🎯 BIAS: LONG/SHORT/NEUTRAL
 
-🔥 LIQUIDATIONS (24h):
-- Longs: {self._fmt_usd(liq['longs_24h'])}
-- Shorts: {self._fmt_usd(liq['shorts_24h'])} 
-- Net: {self._fmt_usd(liq['net_24h'])}
-- 7d Total: {self._fmt_usd(liq['longs_7d'] + liq['shorts_7d'])}
+📊 KEY INSIGHT (2-3 sentences max):
+What the derivatives are telling us about market direction
 
-⚖️ LONG/SHORT RATIO:
-- Current: {self._fmt_ratio(ls_ratio['current'])}
-- 24h Change: {ls_ratio['24h_change']:+.2f}
-- 7d Average: {self._fmt_ratio(ls_ratio['7d_avg'])}
-- 7d Range: {self._fmt_ratio(ls_ratio['7d_min'])} - {self._fmt_ratio(ls_ratio['7d_max'])}
+⚠️ TOP RISK (1-2 sentences):
+Main risk for position holders right now
 
-💰 BASIS & PRICES:
-- Perp: ${prices['perp_current']:.2f}
-- Spot: ${prices['spot_current']:.2f}  
-- Basis: {self._fmt_percentage(prices['basis_current'], 3)} ({self._fmt_percentage(prices['basis_annualized'], 1)} ann.)
+💡 ACTION (1-2 sentences):
+What to do next based on derivatives signals
 
-🔗 CORRELATIONS (7d):
-- OI ↔ Funding: {correlations['oi_funding']:.3f}
-- OI ↔ L/S Ratio: {correlations['oi_ls_ratio']:.3f}
-- Funding ↔ L/S: {correlations['funding_ls_ratio']:.3f}
-
-📋 ANALYSIS REQUIREMENTS:
-Provide a focused derivatives analysis (max 350 words) with:
-
-1. 🎯 POSITION BIAS: LONG/SHORT/NEUTRAL (choose one based on derivatives patterns)
-
-2. 📊 DERIVATIVES INSIGHTS (3-4 key observations):
-   - Open Interest trends and what they signal
-   - Funding rate patterns (mean reversion, extremes, sustainability)
-   - Liquidation patterns and cascade risks
-   - Long/Short ratio implications
-   - Basis analysis (contango/backwardation implications)
-
-3. ⚠️ RISK ALERTS (2-3 specific warnings):
-   - Funding squeeze risks
-   - Liquidation cascade zones  
-   - OI divergence warnings
-   - Basis risks for position holders
-
-4. 💡 POSITION ADVICE (2-3 actionable points):
-   - Entry/exit timing based on derivatives
-   - Risk management for current positions
-   - What to watch for next moves
-
-Focus on derivatives-specific signals that matter for position management. Use clear, direct language.
+Keep it punchy, logical, and WhatsApp-friendly. No fluff.
 """
         
         try:
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert derivatives analyst specializing in crypto futures markets. Focus on actionable insights for position holders based on derivatives data patterns."},
+                    {"role": "system", "content": "You are a sharp derivatives analyst. Provide concise, actionable insights for crypto position holders. Keep responses brief and WhatsApp-friendly."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
-                temperature=0.2  # Lower temperature for more consistent analysis
+                max_tokens=300,  # Reduced for concise responses
+                temperature=0.1  # Very focused responses
             )
             
             analysis = response.choices[0].message.content
@@ -411,20 +372,14 @@ Focus on derivatives-specific signals that matter for position management. Use c
         prices = derivatives_data["prices"]
         
         message = f"""
-🎯 SOL DERIVATIVES ALERT
-⏰ {timestamp}
+🎯 SOL DERIVATIVES • {timestamp}
 
-📊 KEY METRICS:
-💰 Perp: ${prices['perp_current']:.2f} | Spot: ${prices['spot_current']:.2f}
-📈 OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change'])} 24h)
-💸 Funding: {self._fmt_percentage(funding['current'], 4)} ({self._fmt_percentage(funding['annualized_current'], 2)} ann)
-⚖️ L/S: {self._fmt_ratio(ls_ratio['current'])} (Δ{ls_ratio['24h_change']:+.2f})
-🔥 Liq 24h: {self._fmt_usd(liq['longs_24h'])}L / {self._fmt_usd(liq['shorts_24h'])}S
-🎢 Basis: {self._fmt_percentage(prices['basis_current'], 3)} ({self._fmt_percentage(prices['basis_annualized'], 1)} ann)
+📊 ${prices['perp_current']:.2f} | OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change'])} 24h)
+💸 Funding: {self._fmt_percentage(funding['current'], 4)} | L/S: {self._fmt_ratio(ls_ratio['current'])}
 
 {o3_analysis}
 
-📈 Data: Coinalyze | Analysis: o3
+📈 Coinalyze + o3
 """
         
         return message.strip()
