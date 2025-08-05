@@ -299,83 +299,24 @@ class SingleO3SolanaAgent:
         patterns = data.get('patterns', {})
         
         prompt = f"""
-        🎯 COMPREHENSIVE SOL DERIVATIVES ANALYSIS • {datetime.now(timezone.utc).strftime('%H:%M UTC')}
+        Analyze SOL derivatives data and provide concise trading insights:
+
+        MARKET DATA:
+        • Price: ${data.get('current_price', 0):.2f} ({data.get('price_change_24h_pct', 0):+.1f}% 24h)
+        • Open Interest: ${data.get('open_interest_usd', 0)/1e6:.1f}M ({data.get('oi_change_24h_pct', 0):+.1f}% 24h)
+        • Funding Rate: {data.get('funding_rate_pct', 0):.3f}%
+        • Long/Short Ratio: {data.get('current_ls_ratio', 0):.2f}
+        • Long Liquidations: ${data.get('long_liquidations_24h_usd', 0)/1e6:.1f}M
+        • Short Liquidations: ${data.get('short_liquidations_24h_usd', 0)/1e6:.1f}M
         
-        You are receiving ALL available market data for a complete analysis. Use your superior o3 reasoning.
+        Provide analysis in this EXACT format:
         
-        ═══════════════════════════════════════════════════════════════════════════════
-        📊 COMPLETE MARKET DATA SNAPSHOT
-        ═══════════════════════════════════════════════════════════════════════════════
+        🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR]
+        📊 KEY INSIGHT: [Brief insight about positioning/funding patterns]
+        ⚠️ TOP RISK: [Key risk with price level]
+        💡 ACTION: [Specific trading recommendation with levels]
         
-        💰 CURRENT PRICE DATA:
-        • Price: ${data.get('current_price', 0):.2f}
-        • 24h Change: {data.get('price_change_24h_pct', 0):+.2f}%
-        • 1h Change: {data.get('price_change_1h_pct', 0):+.2f}%
-        • 24h Range: ${data.get('low_24h', 0):.2f} - ${data.get('high_24h', 0):.2f}
-        • 24h Volume: {data.get('volume_24h', 0):,.0f}
-        
-        🏦 OPEN INTEREST ANALYSIS:
-        • Current OI: ${data.get('open_interest_usd', 0):,.0f} (${data.get('open_interest_usd', 0)/1e6:.1f}M)
-        • OI Change 24h: {data.get('oi_change_24h_pct', 0):+.2f}%
-        • OI Change 1h: {data.get('oi_change_1h_pct', 0):+.2f}%
-        • OI Pattern: {patterns.get('open_interest', {}).get('trend', 'unknown')} trend, {patterns.get('open_interest', {}).get('momentum_change_pct', 0):+.1f}% momentum
-        
-        💸 FUNDING DYNAMICS:
-        • Current Rate: {data.get('funding_rate_pct', 0):.4f}% (Annual: {data.get('funding_rate_annual_pct', 0):+.1f}%)
-        • Predicted Rate: {data.get('predicted_funding_rate_pct', 0):.4f}%
-        • Interpretation: {'Longs paying shorts' if data.get('funding_rate', 0) > 0 else 'Shorts paying longs' if data.get('funding_rate', 0) < 0 else 'Neutral'}
-        
-        ⚖️ POSITIONING INTELLIGENCE:
-        • Current L/S Ratio: {data.get('current_ls_ratio', 0):.2f}
-        • 24h Average L/S: {data.get('avg_ls_ratio_24h', 0):.2f}
-        • L/S Change 24h: {data.get('ls_ratio_change_24h_pct', 0):+.2f}%
-        • L/S Change 1h: {data.get('ls_ratio_change_1h_pct', 0):+.2f}%
-        • L/S Pattern: {patterns.get('ls_ratio', {}).get('trend', 'unknown')} trend, volatility {patterns.get('ls_ratio', {}).get('volatility', 0):.2f}
-        
-        🔥 LIQUIDATION DATA (24h):
-        • Long Liquidations: ${data.get('long_liquidations_24h_usd', 0):,.0f} (${data.get('long_liquidations_24h_usd', 0)/1e6:.2f}M)
-        • Short Liquidations: ${data.get('short_liquidations_24h_usd', 0):,.0f} (${data.get('short_liquidations_24h_usd', 0)/1e6:.2f}M)
-        • Total Liquidations: ${data.get('total_liquidations_24h_usd', 0):,.0f} (${data.get('total_liquidations_24h_usd', 0)/1e6:.2f}M)
-        • Liquidation Ratio: {data.get('liquidation_ratio', 0):.2f} (Long/Short)
-        
-        📈 PATTERN INSIGHTS:
-        • Price Momentum: {patterns.get('price', {}).get('trend', 'unknown')} ({patterns.get('price', {}).get('momentum_change_pct', 0):+.1f}% change)
-        • L/S Positioning: Current {data.get('current_ls_ratio', 0):.2f} vs Recent 6h avg {patterns.get('ls_ratio', {}).get('recent_6h_avg', 0):.2f}
-        • OI Flow: {patterns.get('open_interest', {}).get('trend', 'unknown')} with {patterns.get('open_interest', {}).get('momentum_change_pct', 0):+.1f}% momentum
-        
-        ═══════════════════════════════════════════════════════════════════════════════
-        🧠 O3 ANALYSIS REQUIREMENTS - WHATSAPP FORMAT
-        ═══════════════════════════════════════════════════════════════════════════════
-        
-        CRITICAL: This analysis is for WHATSAPP delivery to SOL traders. Keep it EXTREMELY CONCISE.
-        
-        FORMAT REQUIREMENTS:
-        • Total response must be under 400 characters
-        • Use bullet points and short sentences
-        • Focus only on actionable insights for traders already in SOL positions
-        
-        Provide ONLY these 4 sections:
-        
-        🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR] - one word only
-        
-        📊 KEY INSIGHT: [1-2 sentences max about most important pattern]
-        
-        ⚠️ TOP RISK: [1 sentence about key risk level]
-        
-        💡 ACTION: [1-2 sentences with specific price levels]
-        
-        MANDATORY CONSTRAINTS:
-        • Each section maximum 80 characters
-        • No explanations of basic concepts
-        • No detailed analysis - traders already understand derivatives
-        • Focus on ACTIONABLE price levels and immediate risks
-        • Use abbreviations where possible (L/S, OI, etc.)
-        
-        EXAMPLE FORMAT:
-        🎯 BIAS: UNCLEAR
-        📊 KEY INSIGHT: L/S diverging from funding - retail long vs institutional short
-        ⚠️ TOP RISK: Long squeeze if >$170, cascade if <$163  
-        💡 ACTION: Wait for $170 break or $163 defense, tight stops
+        Keep each line under 80 characters. Be direct and actionable.
         """
         
         try:
@@ -385,20 +326,59 @@ class SingleO3SolanaAgent:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an elite derivatives trader providing CONCISE WhatsApp alerts to professional SOL traders. Your responses must be under 400 characters total. Focus only on actionable price levels and immediate risks. No explanations - traders already understand derivatives. Be extremely concise and structured."
+                        "content": "You are an elite derivatives trader. Provide concise trading analysis for SOL traders. Be direct and actionable."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                max_completion_tokens=300  # Concise WhatsApp format
+                max_completion_tokens=500
             )
             
-            return response.choices[0].message.content
+            analysis_content = response.choices[0].message.content
+            print(f"🔍 DEBUG: O3 returned {len(analysis_content)} characters")
+            print(f"🔍 DEBUG: Content preview: {analysis_content[:200]}...")
+            
+            if not analysis_content or len(analysis_content.strip()) < 50:
+                print("⚠️ O3 returned insufficient content, generating fallback...")
+                return self._generate_fallback_analysis(data)
+            
+            return analysis_content
             
         except Exception as e:
-            return f"❌ O3 analysis failed: {e}"
+            print(f"❌ O3 analysis failed: {e}")
+            return self._generate_fallback_analysis(data)
+    
+    def _generate_fallback_analysis(self, data: Dict[str, Any]) -> str:
+        """Generate basic analysis when o3 fails"""
+        current_ls = data.get('current_ls_ratio', 0)
+        funding = data.get('funding_rate_pct', 0)
+        price_change = data.get('price_change_24h_pct', 0)
+        oi_change = data.get('oi_change_24h_pct', 0)
+        current_price = data.get('current_price', 0)
+        
+        # Simple logic-based analysis
+        if funding < -0.15 and current_ls > 2.5:
+            bias = "BEARISH"
+            insight = "High L/S ratio with negative funding suggests overcrowded longs"
+            risk = f"Long liquidation cascade below ${current_price * 0.97:.0f}"
+            action = f"Consider shorts on bounce, target ${current_price * 0.95:.0f}"
+        elif funding > 0.1 and current_ls < 1.5:
+            bias = "BULLISH" 
+            insight = "Low L/S ratio with positive funding suggests oversold conditions"
+            risk = f"Short squeeze above ${current_price * 1.03:.0f}"
+            action = f"Look for longs on dip, target ${current_price * 1.05:.0f}"
+        else:
+            bias = "NEUTRAL"
+            insight = "Mixed signals in positioning and funding"
+            risk = f"Range-bound between ${current_price * 0.97:.0f}-${current_price * 1.03:.0f}"
+            action = "Wait for clearer directional signals"
+        
+        return f"""🎯 BIAS: {bias}
+📊 KEY INSIGHT: {insight}
+⚠️ TOP RISK: {risk}
+💡 ACTION: {action}"""
     
     def format_for_whatsapp(self, analysis: str, data: Dict[str, Any]) -> str:
         """Format concise analysis for WhatsApp delivery"""
