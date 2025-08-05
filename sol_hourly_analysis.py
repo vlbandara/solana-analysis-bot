@@ -338,29 +338,7 @@ Keep under 480 characters total for WhatsApp compatibility.
             
         except Exception as e:
             print(f"❌ o3 model failed: {e}")
-            print("🔄 Using enhanced fallback analysis...")
-            
-            # Enhanced fallback with comprehensive data
-            if current['funding_pct'] < -0.15 and current['ls_ratio'] > 2.8:
-                bias = "BEARISH" 
-                insight = f"L/S {current['ls_ratio']:.1f} vs funding {current['funding_pct']:.2f}% shows retail crowded long while smart money shorts. Basis {current['basis_pct']:.2f}% confirms perp discount."
-                risk = f"Long liquidations above ${current['long_liq_24h']/1e6:.0f}M could cascade if price breaks support"
-                action = "Short rallies above current price, target breakdown levels"
-            elif current['funding_pct'] > 0.1 and current['ls_ratio'] < 1.5:
-                bias = "BULLISH"
-                insight = f"Low L/S {current['ls_ratio']:.1f} with positive funding {current['funding_pct']:.2f}% shows shorts squeezed. OI {current['oi_24h_change']:+.1f}% suggests fresh positioning."
-                risk = f"Short squeeze risk if price breaks resistance"
-                action = "Long dips, target squeeze levels above current highs"
-            else:
-                bias = "UNCLEAR"
-                insight = f"Mixed signals: L/S {current['ls_ratio']:.1f}, funding {current['funding_pct']:.2f}%, OI {current['oi_24h_change']:+.1f}% show conflicting forces"
-                risk = "Range-bound action with low conviction until clearer pattern emerges"
-                action = "Wait for breakout confirmation or positioning extremes"
-            
-            return f"""🎯 BIAS: {bias}
-📊 KEY INSIGHT: {insight}
-⚠️ TOP RISK: {risk}
-💡 ACTION: {action}"""
+            raise RuntimeError(f"o3 analysis failed: {e}")
     
     def format_whatsapp(self, analysis, data):
         """Format for WhatsApp with rich header"""
