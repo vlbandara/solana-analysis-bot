@@ -1,8 +1,5 @@
-ccxt>=4.0.0
 openai>=1.0.0
 requests>=2.31.0
-pandas>=2.0.0
+numpy>=1.23.0
 python-dotenv>=1.0.0
-schedule>=1.2.0
-solana>=0.31.0
-solders>=0.16.0
+twilio>=8.0.0
