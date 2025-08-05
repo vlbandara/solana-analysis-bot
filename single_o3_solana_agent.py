@@ -299,24 +299,34 @@ class SingleO3SolanaAgent:
         patterns = data.get('patterns', {})
         
         prompt = f"""
-        Analyze SOL derivatives data and provide concise trading insights:
+        Analyze SOL derivatives data and provide trading insights with reasoning:
 
         MARKET DATA:
         • Price: ${data.get('current_price', 0):.2f} ({data.get('price_change_24h_pct', 0):+.1f}% 24h)
         • Open Interest: ${data.get('open_interest_usd', 0)/1e6:.1f}M ({data.get('oi_change_24h_pct', 0):+.1f}% 24h)
-        • Funding Rate: {data.get('funding_rate_pct', 0):.3f}%
-        • Long/Short Ratio: {data.get('current_ls_ratio', 0):.2f}
+        • Funding Rate: {data.get('funding_rate_pct', 0):.3f}% (predicted: {data.get('predicted_funding_rate_pct', 0):.3f}%)
+        • Long/Short Ratio: {data.get('current_ls_ratio', 0):.2f} (24h avg: {data.get('avg_ls_ratio_24h', 0):.2f})
         • Long Liquidations: ${data.get('long_liquidations_24h_usd', 0)/1e6:.1f}M
         • Short Liquidations: ${data.get('short_liquidations_24h_usd', 0)/1e6:.1f}M
+        • L/S Change 24h: {data.get('ls_ratio_change_24h_pct', 0):+.1f}%
         
-        Provide analysis in this EXACT format:
+        Provide analysis with REASONING about patterns/correlations:
         
         🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR]
-        📊 KEY INSIGHT: [Brief insight about positioning/funding patterns]
-        ⚠️ TOP RISK: [Key risk with price level]
-        💡 ACTION: [Specific trading recommendation with levels]
         
-        Keep each line under 80 characters. Be direct and actionable.
+        📊 KEY INSIGHT: [Explain the most significant pattern - WHY this bias? What correlation between funding/L/S/OI led to this view? Be specific about the logic.]
+        
+        ⚠️ TOP RISK: [Key risk scenario with price level - explain WHY this risk based on positioning data]
+        
+        💡 ACTION: [Trading recommendation with levels - explain the reasoning behind entry/target levels]
+        
+        REQUIREMENTS:
+        • Explain your reasoning - what patterns/correlations drove the decision?
+        • Connect the dots between funding rates, L/S ratios, OI changes
+        • If L/S is diverging from funding, explain what that means
+        • If OI is changing while price is flat, explain the implications
+        • Keep total response under 600 characters for WhatsApp
+        • Be logical and show your analytical process
         """
         
         try:
@@ -326,14 +336,14 @@ class SingleO3SolanaAgent:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an elite derivatives trader. Provide concise trading analysis for SOL traders. Be direct and actionable."
+                        "content": "You are an elite derivatives trader and analyst. Provide trading insights that explain your reasoning - show the logical connections between funding rates, positioning data, and market dynamics. Explain what patterns/correlations led to your conclusion. Traders want to understand WHY, not just WHAT. Be analytical but keep it under 600 characters for WhatsApp delivery."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                max_completion_tokens=500
+                max_completion_tokens=700  # More tokens for reasoning and logic
             )
             
             analysis_content = response.choices[0].message.content
@@ -351,32 +361,38 @@ class SingleO3SolanaAgent:
             return self._generate_fallback_analysis(data)
     
     def _generate_fallback_analysis(self, data: Dict[str, Any]) -> str:
-        """Generate basic analysis when o3 fails"""
+        """Generate analysis with reasoning when o3 fails"""
         current_ls = data.get('current_ls_ratio', 0)
+        avg_ls = data.get('avg_ls_ratio_24h', 0)
         funding = data.get('funding_rate_pct', 0)
+        predicted_funding = data.get('predicted_funding_rate_pct', 0)
         price_change = data.get('price_change_24h_pct', 0)
         oi_change = data.get('oi_change_24h_pct', 0)
         current_price = data.get('current_price', 0)
+        ls_change = data.get('ls_ratio_change_24h_pct', 0)
         
-        # Simple logic-based analysis
+        # Enhanced logic-based analysis with reasoning
         if funding < -0.15 and current_ls > 2.5:
             bias = "BEARISH"
-            insight = "High L/S ratio with negative funding suggests overcrowded longs"
-            risk = f"Long liquidation cascade below ${current_price * 0.97:.0f}"
-            action = f"Consider shorts on bounce, target ${current_price * 0.95:.0f}"
+            reasoning = f"L/S {current_ls:.1f} (vs {avg_ls:.1f} avg) with funding {funding:.3f}% shows retail longs crowded while institutions short perps"
+            insight = f"📊 KEY INSIGHT: {reasoning}. This divergence indicates smart money positioning against retail sentiment"
+            risk = f"Long liquidation cascade below ${current_price * 0.97:.0f} as overleveraged longs get squeezed"
+            action = f"Short bounces to ${current_price * 1.02:.0f}, target ${current_price * 0.95:.0f}. Logic: negative funding makes short carry profitable"
         elif funding > 0.1 and current_ls < 1.5:
-            bias = "BULLISH" 
-            insight = "Low L/S ratio with positive funding suggests oversold conditions"
-            risk = f"Short squeeze above ${current_price * 1.03:.0f}"
-            action = f"Look for longs on dip, target ${current_price * 1.05:.0f}"
+            bias = "BULLISH"
+            reasoning = f"Low L/S {current_ls:.1f} with positive funding {funding:.3f}% suggests shorts overextended and paying premium"
+            insight = f"📊 KEY INSIGHT: {reasoning}. When shorts pay longs, it often precedes squeeze"
+            risk = f"Short squeeze above ${current_price * 1.03:.0f} as funding costs force short covering"
+            action = f"Buy dips to ${current_price * 0.98:.0f}, target ${current_price * 1.05:.0f}. Logic: positive funding rewards long positions"
         else:
-            bias = "NEUTRAL"
-            insight = "Mixed signals in positioning and funding"
-            risk = f"Range-bound between ${current_price * 0.97:.0f}-${current_price * 1.03:.0f}"
-            action = "Wait for clearer directional signals"
+            bias = "UNCLEAR" 
+            reasoning = f"L/S {current_ls:.1f} vs funding {funding:.3f}% showing mixed signals"
+            insight = f"📊 KEY INSIGHT: {reasoning}. Price +{price_change:.1f}% but OI only +{oi_change:.1f}% suggests cautious positioning"
+            risk = f"Range-bound {current_price * 0.97:.0f}-{current_price * 1.03:.0f} until positioning clarifies"
+            action = "Wait for funding/L/S alignment or clear breakout above/below range. Logic: conflicting signals need resolution"
         
         return f"""🎯 BIAS: {bias}
-📊 KEY INSIGHT: {insight}
+{insight}
 ⚠️ TOP RISK: {risk}
 💡 ACTION: {action}"""
     
