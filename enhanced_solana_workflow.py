@@ -42,15 +42,19 @@ class EnhancedSolanaWorkflow:
         """Format large USD values with K / M / B suffixes."""
         if value == 0:
             return "$0"
+        
+        # Handle sign separately
+        sign = "-" if value < 0 else ""
         abs_val = abs(value)
+        
         if abs_val >= 1_000_000_000:
-            return f"${value/1_000_000_000:.2f}B"
+            return f"{sign}${abs_val/1_000_000_000:.2f}B"
         elif abs_val >= 1_000_000:
-            return f"${value/1_000_000:.2f}M"
+            return f"{sign}${abs_val/1_000_000:.2f}M"
         elif abs_val >= 1_000:
-            return f"${value/1_000:.1f}K"
+            return f"{sign}${abs_val/1_000:.1f}K"
         else:
-            return f"${value:,.0f}"
+            return f"{sign}${abs_val:,.0f}"
     
     @staticmethod
     def _fmt_percentage(value: float, decimals: int = 2) -> str:
@@ -158,7 +162,7 @@ class EnhancedSolanaWorkflow:
                 "7d_min": min(oi_values) if oi_values else 0
             }
             print(f"   ✅ OI: {self._fmt_usd(derivatives_data['open_interest']['current'])} "
-                  f"(24h: {self._fmt_usd(derivatives_data['open_interest']['24h_change']):+})")
+                  f"(24h: {self._fmt_usd(derivatives_data['open_interest']['24h_change'])})")
         except Exception as e:
             print(f"   ❌ Open Interest error: {e}")
             derivatives_data["open_interest"] = {"current": 0, "history": [], "24h_change": 0, "7d_change": 0}
@@ -318,8 +322,8 @@ Analyze this 7-day SOL derivatives data and identify patterns, correlations, and
 
 📊 OPEN INTEREST:
 - Current: {self._fmt_usd(oi['current'])}
-- 24h Change: {self._fmt_usd(oi['24h_change']):+}
-- 7d Change: {self._fmt_usd(oi['7d_change']):+}
+- 24h Change: {self._fmt_usd(oi['24h_change'])}
+- 7d Change: {self._fmt_usd(oi['7d_change'])}
 - 7d Range: {self._fmt_usd(oi['7d_min'])} - {self._fmt_usd(oi['7d_max'])}
 
 💸 FUNDING RATE:
@@ -331,7 +335,7 @@ Analyze this 7-day SOL derivatives data and identify patterns, correlations, and
 🔥 LIQUIDATIONS (24h):
 - Longs: {self._fmt_usd(liq['longs_24h'])}
 - Shorts: {self._fmt_usd(liq['shorts_24h'])} 
-- Net: {self._fmt_usd(liq['net_24h']):+}
+- Net: {self._fmt_usd(liq['net_24h'])}
 - 7d Total: {self._fmt_usd(liq['longs_7d'] + liq['shorts_7d'])}
 
 ⚖️ LONG/SHORT RATIO:
@@ -412,7 +416,7 @@ Focus on derivatives-specific signals that matter for position management. Use c
 
 📊 KEY METRICS:
 💰 Perp: ${prices['perp_current']:.2f} | Spot: ${prices['spot_current']:.2f}
-📈 OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change']):+} 24h)
+📈 OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change'])} 24h)
 💸 Funding: {self._fmt_percentage(funding['current'], 4)} ({self._fmt_percentage(funding['annualized_current'], 2)} ann)
 ⚖️ L/S: {self._fmt_ratio(ls_ratio['current'])} (Δ{ls_ratio['24h_change']:+.2f})
 🔥 Liq 24h: {self._fmt_usd(liq['longs_24h'])}L / {self._fmt_usd(liq['shorts_24h'])}S
