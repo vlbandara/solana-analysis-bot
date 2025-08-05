@@ -393,46 +393,65 @@ class O3SolanaAgent:
         try:
             print("\n🧠 Engaging ChatGPT o3 model for comprehensive analysis...")
             print("⚡ Processing advanced technical, fundamental, and quantitative analysis...")
+            print("🎯 Leveraging o3's superior reasoning for pattern detection and market insights...")
             
             response = client.chat.completions.create(
                 model="o3",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an elite quantitative trading analyst and portfolio manager with 25+ years of experience across traditional finance and digital assets. You have advanced degrees in finance, mathematics, and computer science. You specialize in multi-asset derivatives trading, systematic strategies, and risk management. Use your full analytical capabilities to provide institutional-grade trading recommendations with precise quantitative analysis, comprehensive risk assessment, and sophisticated market microstructure insights."
+                        "content": "You are an elite quantitative trading analyst and portfolio manager with 25+ years of experience across traditional finance and digital assets. You have advanced degrees in finance, mathematics, and computer science. You specialize in multi-asset derivatives trading, systematic strategies, risk management, and pattern recognition. You excel at identifying subtle market dynamics, trend reversals, positioning shifts, and regime changes that other analysts miss. Use your superior reasoning capabilities to provide institutional-grade trading recommendations with precise quantitative analysis, comprehensive risk assessment, sophisticated market microstructure insights, and deep behavioral finance understanding."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                max_completion_tokens=12000  # Maximum for comprehensive analysis
+                max_completion_tokens=15000  # Maximum for comprehensive o3 analysis
             )
             
             return response.choices[0].message.content, "o3"
             
         except Exception as e:
-            if "o3" in str(e).lower():
-                print("⚠️ o3 model not available, falling back to GPT-4...")
-                
+            print(f"⚠️ o3 model error: {e}")
+            # Try o3-mini as intermediate fallback
+            try:
+                print("🔄 Falling back to o3-mini...")
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="o3-mini",
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are an expert quantitative trader and analyst. Provide comprehensive trading analysis with specific recommendations."
+                            "content": "You are an expert quantitative trading analyst specializing in derivatives and pattern recognition. Provide comprehensive trading analysis."
                         },
                         {
                             "role": "user",
                             "content": prompt
                         }
                     ],
-                    max_tokens=4000
+                    max_completion_tokens=8000
                 )
-                
-                return response.choices[0].message.content, "GPT-4"
-            else:
-                raise e
+                return response.choices[0].message.content, "o3-mini"
+            except Exception as fallback_e:
+                print(f"🔄 Final fallback to GPT-4...")
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an expert quantitative trader and analyst. Provide comprehensive trading analysis with specific recommendations."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        max_tokens=4000
+                    )
+                    return response.choices[0].message.content, "GPT-4"
+                except Exception as final_e:
+                    return f"Analysis unavailable. o3 error: {e}, o3-mini error: {fallback_e}, GPT-4 error: {final_e}", "Error"
 
 def run_o3_enhanced_analysis():
     """Main function for o3-powered Solana analysis"""

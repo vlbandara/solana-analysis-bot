@@ -288,21 +288,33 @@ def ai_direction(metrics: Dict[str, Any]) -> str:
     )
 
     try:
+        print("🧠 Engaging o3 model for directional analysis...")
         resp = client.chat.completions.create(
             model="o3",
-            messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=100,
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are an elite cryptocurrency derivatives trader specializing in pattern recognition and market sentiment analysis. Focus on identifying subtle shifts in positioning, funding dynamics, and liquidation risks that indicate directional opportunities."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=200,  # More tokens for better o3 insights
         )
         return resp.choices[0].message.content.strip()
     except Exception as exc:
+        print(f"⚠️ o3 model error: {exc}")
         # fallback to GPT-4
-        resp = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=60,
-            temperature=0.2,
-        )
-        return resp.choices[0].message.content.strip()
+        try:
+            print("🔄 Falling back to GPT-4...")
+            resp = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=80,
+                temperature=0.2,
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as fallback_e:
+            return f"Analysis unavailable. o3 error: {exc}, GPT-4 error: {fallback_e}"
 
 ################################################################################
 # Correlation AI summary
@@ -325,12 +337,23 @@ def ai_correlation_summary(corr: Dict[tuple[str, str], float]) -> str:
         "Keep it concise and trader-friendly.\n\n" + data_str
     )
 
-    resp = client.chat.completions.create(
-        model="o3",
-        messages=[{"role": "user", "content": prompt}],
-        max_completion_tokens=120,
-    )
-    return "\n".join(resp.choices[0].message.content.strip().splitlines())  # preserve lines
+    try:
+        print("🧠 Engaging o3 model for correlation analysis...")
+        resp = client.chat.completions.create(
+            model="o3",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert quantitative analyst specializing in derivatives market correlations and risk assessment. Focus on identifying key relationships that indicate potential price reversions, cascade risks, or positioning imbalances."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=180,  # More tokens for detailed correlation insights
+        )
+        return "\n".join(resp.choices[0].message.content.strip().splitlines())  # preserve lines
+    except Exception as e:
+        print(f"⚠️ o3 correlation analysis error: {e}")
+        return f"Correlation analysis unavailable: {e}"
 
 ################################################################################
 # WhatsApp helper wrapper
