@@ -48,76 +48,132 @@ class HourlySolAnalysis:
             return None
     
     def get_current_snapshot(self):
-        """Get current market snapshot"""
-        print("📊 Fetching SOL data snapshot...")
+        """Get comprehensive market snapshot"""
+        print("📊 Fetching comprehensive SOL data...")
         
         now = int(time.time())
         
-        # Current price
+        # 1. Current price + 24h history
         price_data = self._api_get("/ohlcv-history", {
             "symbols": self.perp_symbol,
-            "interval": "1min",
-            "from": now - 300,
+            "interval": "1hour", 
+            "from": now - (24 * 3600),
             "to": now
         })
         
         current_price = 0
+        price_24h_change = 0
         if price_data and price_data[0].get('history'):
-            current_price = float(price_data[0]['history'][-1]['c'])
+            history = price_data[0]['history']
+            current_price = float(history[-1]['c'])
+            if len(history) > 1:
+                price_24h_ago = float(history[0]['c'])
+                price_24h_change = (current_price - price_24h_ago) / price_24h_ago * 100
         
-        # Open Interest
+        # 2. Open Interest + 24h change
         oi_data = self._api_get("/open-interest", {
             "symbols": self.perp_symbol,
             "convert_to_usd": "true"
         })
         oi_usd = float(oi_data[0]['value']) if oi_data else 0
         
-        # Funding Rate
-        funding_data = self._api_get("/funding-rate", {"symbols": self.perp_symbol})
-        funding_rate = float(funding_data[0]['value']) * 100 if funding_data else 0
-        
-        # Long/Short Ratio
-        ls_data = self._api_get("/long-short-ratio-history", {
+        oi_history = self._api_get("/open-interest-history", {
             "symbols": self.perp_symbol,
             "interval": "1hour",
-            "from": now - 3600,
-            "to": now
-        })
-        
-        ls_ratio = 0
-        if ls_data and ls_data[0].get('history'):
-            latest = ls_data[0]['history'][-1]
-            ls_ratio = float(latest.get('r', 0))
-        
-        # Recent liquidations (6h)
-        liq_data = self._api_get("/liquidation-history", {
-            "symbols": self.perp_symbol,
-            "interval": "1hour", 
-            "from": now - (6 * 3600),
+            "from": now - (24 * 3600),
             "to": now,
             "convert_to_usd": "true"
         })
         
-        long_liq = short_liq = 0
+        oi_24h_change = 0
+        if oi_history and oi_history[0].get('history'):
+            history = oi_history[0]['history'] 
+            if len(history) > 1:
+                oi_24h_ago = float(history[0]['v'])
+                oi_24h_change = (oi_usd - oi_24h_ago) / oi_24h_ago * 100
+        
+        # 3. Funding Rate + predicted
+        funding_data = self._api_get("/funding-rate", {"symbols": self.perp_symbol})
+        funding_rate = float(funding_data[0]['value']) * 100 if funding_data else 0
+        
+        predicted_funding = self._api_get("/predicted-funding-rate", {"symbols": self.perp_symbol})
+        predicted_funding_rate = float(predicted_funding[0]['value']) * 100 if predicted_funding else 0
+        
+        # 4. Long/Short Ratio + 24h patterns
+        ls_data = self._api_get("/long-short-ratio-history", {
+            "symbols": self.perp_symbol,
+            "interval": "1hour",
+            "from": now - (24 * 3600), 
+            "to": now
+        })
+        
+        ls_ratio = 0
+        ls_24h_avg = 0
+        ls_24h_change = 0
+        if ls_data and ls_data[0].get('history'):
+            history = ls_data[0]['history']
+            if history:
+                ls_ratio = float(history[-1].get('r', 0))
+                # Calculate 24h average
+                ratios = [float(h.get('r', 0)) for h in history if h.get('r')]
+                ls_24h_avg = sum(ratios) / len(ratios) if ratios else 0
+                # Calculate 24h change
+                if len(history) > 1:
+                    ls_24h_ago = float(history[0].get('r', 0))
+                    if ls_24h_ago > 0:
+                        ls_24h_change = (ls_ratio - ls_24h_ago) / ls_24h_ago * 100
+        
+        # 5. Comprehensive liquidations (24h)
+        liq_data = self._api_get("/liquidation-history", {
+            "symbols": self.perp_symbol,
+            "interval": "1hour", 
+            "from": now - (24 * 3600),
+            "to": now,
+            "convert_to_usd": "true"
+        })
+        
+        long_liq_24h = short_liq_24h = 0
+        long_liq_6h = short_liq_6h = 0
         if liq_data and liq_data[0].get('history'):
-            for item in liq_data[0]['history']:
-                long_liq += item.get('l', 0)
-                short_liq += item.get('s', 0)
+            history = liq_data[0]['history']
+            for i, item in enumerate(history):
+                long_val = item.get('l', 0)
+                short_val = item.get('s', 0)
+                long_liq_24h += long_val
+                short_liq_24h += short_val
+                # Last 6 hours
+                if i >= len(history) - 6:
+                    long_liq_6h += long_val
+                    short_liq_6h += short_val
+        
+        # 6. Basis (perp vs spot spread)
+        basis_data = self._api_get("/basis", {"symbols": self.perp_symbol})
+        basis_pct = float(basis_data[0]['value']) * 100 if basis_data else 0
         
         snapshot = {
             'timestamp': now,
             'price': current_price,
+            'price_24h_change': price_24h_change,
             'oi_usd': oi_usd,
+            'oi_24h_change': oi_24h_change,
             'funding_pct': funding_rate,
+            'predicted_funding_pct': predicted_funding_rate,
             'ls_ratio': ls_ratio,
-            'long_liq_6h': long_liq,
-            'short_liq_6h': short_liq
+            'ls_24h_avg': ls_24h_avg,
+            'ls_24h_change': ls_24h_change,
+            'long_liq_24h': long_liq_24h,
+            'short_liq_24h': short_liq_24h,
+            'long_liq_6h': long_liq_6h,
+            'short_liq_6h': short_liq_6h,
+            'basis_pct': basis_pct
         }
         
-        print(f"   Price: ${current_price:.2f}")
-        print(f"   OI: ${oi_usd/1e6:.1f}M")
-        print(f"   Funding: {funding_rate:.3f}%") 
-        print(f"   L/S: {ls_ratio:.2f}")
+        print(f"   💰 Price: ${current_price:.2f} ({price_24h_change:+.1f}% 24h)")
+        print(f"   🏦 OI: ${oi_usd/1e6:.1f}M ({oi_24h_change:+.1f}% 24h)")
+        print(f"   💸 Funding: {funding_rate:.3f}% (pred: {predicted_funding_rate:.3f}%)")
+        print(f"   ⚖️ L/S: {ls_ratio:.2f} (24h avg: {ls_24h_avg:.2f}, {ls_24h_change:+.1f}%)")
+        print(f"   🔥 Liq 24h: ${long_liq_24h/1e6:.1f}M L / ${short_liq_24h/1e6:.1f}M S")
+        print(f"   📈 Basis: {basis_pct:.3f}%")
         
         return snapshot
     
@@ -145,6 +201,11 @@ class HourlySolAnalysis:
         funding_change = abs(current['funding_pct'] - last['funding_pct'])
         ls_change = abs(current['ls_ratio'] - last['ls_ratio']) / last['ls_ratio'] * 100
         
+        # Check 24h price momentum shift
+        price_momentum_change = 0
+        if 'price_24h_change' in last:
+            price_momentum_change = abs(current['price_24h_change'] - last['price_24h_change'])
+        
         # Thresholds for significant changes
         if price_change > 2.0:
             return True, f"Price moved {price_change:.1f}%"
@@ -154,6 +215,19 @@ class HourlySolAnalysis:
             return True, f"Funding shifted {funding_change:.3f}%"
         if ls_change > 10.0:
             return True, f"L/S changed {ls_change:.1f}%"
+        
+        # New thresholds for comprehensive data
+        if price_momentum_change > 3.0:
+            return True, f"24h momentum shift {price_momentum_change:.1f}%"
+        if abs(current['oi_24h_change']) > 8.0:
+            return True, f"OI 24h change {abs(current['oi_24h_change']):.1f}%"
+        if abs(current['ls_24h_change']) > 15.0:
+            return True, f"L/S 24h change {abs(current['ls_24h_change']):.1f}%"
+            
+        # Check liquidation spikes
+        total_liq_6h = current['long_liq_6h'] + current['short_liq_6h']
+        if total_liq_6h > 5e6:  # $5M+ in 6h liquidations
+            return True, f"High liquidations ${total_liq_6h/1e6:.1f}M in 6h"
             
         # Check time since last alert (max 4 hours)
         hours_since = (current['timestamp'] - last['timestamp']) / 3600
@@ -163,7 +237,7 @@ class HourlySolAnalysis:
         return False, "No significant changes"
     
     def analyze_with_reasoning(self, current, last=None):
-        """Generate analysis with reasoning"""
+        """Generate comprehensive analysis with reasoning"""
         client = OpenAI(api_key=self.openai_key)
         
         # Calculate changes if we have previous data
@@ -183,62 +257,85 @@ CHANGES SINCE LAST ANALYSIS:
 """
         
         prompt = f"""
-Analyze SOL derivatives snapshot and provide reasoning:
+Analyze comprehensive SOL derivatives data and provide trading insights with reasoning:
 
-CURRENT DATA:
-• Price: ${current['price']:.2f}
-• Open Interest: ${current['oi_usd']/1e6:.1f}M
-• Funding Rate: {current['funding_pct']:.3f}%
-• Long/Short Ratio: {current['ls_ratio']:.2f}
-• Liquidations 6h: Long ${current['long_liq_6h']/1e6:.1f}M | Short ${current['short_liq_6h']/1e6:.1f}M
+COMPREHENSIVE MARKET DATA:
+• Price: ${current['price']:.2f} ({current['price_24h_change']:+.1f}% 24h)
+• Open Interest: ${current['oi_usd']/1e6:.1f}M ({current['oi_24h_change']:+.1f}% 24h)
+• Funding Rate: {current['funding_pct']:.3f}% (predicted: {current['predicted_funding_pct']:.3f}%)
+• Long/Short Ratio: {current['ls_ratio']:.2f} (24h avg: {current['ls_24h_avg']:.2f}, change: {current['ls_24h_change']:+.1f}%)
+• Liquidations 24h: Long ${current['long_liq_24h']/1e6:.1f}M | Short ${current['short_liq_24h']/1e6:.1f}M
+• Liquidations 6h: Long ${current['long_liq_6h']/1e6:.1f}M | Short ${current['short_liq_6h']/1e6:.1f}M  
+• Basis (perp-spot): {current['basis_pct']:.3f}%
 {changes}
 
-Provide analysis in this format:
+CRITICAL ANALYSIS REQUIREMENTS:
+- Identify key patterns and correlations between metrics
+- Explain the logic behind funding vs L/S positioning dynamics
+- Note any divergences between price action and positioning
+- Consider liquidation patterns and basis effects
+- Provide actionable insights with reasoning
+
+Provide analysis in this exact format:
 
 🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR]
-📊 KEY INSIGHT: [What pattern/correlation explains this bias? Be specific about the logic]
-⚠️ TOP RISK: [Key risk with price level based on positioning]
-💡 ACTION: [Trading recommendation with reasoning]
+📊 KEY INSIGHT: [Explain the main pattern/correlation driving this view. Be specific about the logic connecting funding, L/S, OI changes, liquidations]
+⚠️ TOP RISK: [Key risk scenario with specific price levels based on positioning data]
+💡 ACTION: [Specific trading recommendation with entry/exit levels and reasoning]
 
-Requirements:
-• Explain WHY this bias based on funding/L/S correlation
-• Keep under 500 characters total
-• Show logical reasoning behind conclusions
-• If no clear pattern, state UNCLEAR and explain why
+Keep under 480 characters total for WhatsApp compatibility.
 """
         
         try:
+            print("🧠 Calling o3 model for analysis...")
             response = client.chat.completions.create(
                 model="o3",
                 messages=[
-                    {"role": "system", "content": "You are an expert derivatives analyst. Explain your reasoning concisely."},
+                    {"role": "system", "content": "You are an elite derivatives trading analyst. Provide concise but insightful analysis with clear reasoning showing how you connect different market metrics."},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=600
+                max_completion_tokens=800
             )
-            return response.choices[0].message.content
-        except:
-            # Simple fallback logic
-            if current['funding_pct'] < -0.15 and current['ls_ratio'] > 2.5:
-                return """🎯 BIAS: BEARISH
-📊 KEY INSIGHT: High L/S ratio with negative funding shows retail longs crowded while institutions short
-⚠️ TOP RISK: Long cascade below $160 as funding costs squeeze overleveraged positions  
-💡 ACTION: Wait for breakdown or short bounces above $170"""
+            
+            analysis = response.choices[0].message.content.strip()
+            print(f"✅ o3 analysis received ({len(analysis)} chars)")
+            return analysis
+            
+        except Exception as e:
+            print(f"❌ o3 model failed: {e}")
+            print("🔄 Using enhanced fallback analysis...")
+            
+            # Enhanced fallback with comprehensive data
+            if current['funding_pct'] < -0.15 and current['ls_ratio'] > 2.8:
+                bias = "BEARISH" 
+                insight = f"L/S {current['ls_ratio']:.1f} vs funding {current['funding_pct']:.2f}% shows retail crowded long while smart money shorts. Basis {current['basis_pct']:.2f}% confirms perp discount."
+                risk = f"Long liquidations above ${current['long_liq_24h']/1e6:.0f}M could cascade if price breaks support"
+                action = "Short rallies above current price, target breakdown levels"
+            elif current['funding_pct'] > 0.1 and current['ls_ratio'] < 1.5:
+                bias = "BULLISH"
+                insight = f"Low L/S {current['ls_ratio']:.1f} with positive funding {current['funding_pct']:.2f}% shows shorts squeezed. OI {current['oi_24h_change']:+.1f}% suggests fresh positioning."
+                risk = f"Short squeeze risk if price breaks resistance"
+                action = "Long dips, target squeeze levels above current highs"
             else:
-                return """🎯 BIAS: UNCLEAR
-📊 KEY INSIGHT: Mixed signals in positioning data require more clarity
-⚠️ TOP RISK: Range-bound consolidation with low conviction
-💡 ACTION: Wait for clearer directional signals before positioning"""
+                bias = "UNCLEAR"
+                insight = f"Mixed signals: L/S {current['ls_ratio']:.1f}, funding {current['funding_pct']:.2f}%, OI {current['oi_24h_change']:+.1f}% show conflicting forces"
+                risk = "Range-bound action with low conviction until clearer pattern emerges"
+                action = "Wait for breakout confirmation or positioning extremes"
+            
+            return f"""🎯 BIAS: {bias}
+📊 KEY INSIGHT: {insight}
+⚠️ TOP RISK: {risk}
+💡 ACTION: {action}"""
     
     def format_whatsapp(self, analysis, data):
-        """Format for WhatsApp"""
+        """Format for WhatsApp with rich header"""
         utc_time = datetime.now(timezone.utc).strftime('%H:%M UTC')
         
         header = f"🎯 SOL • {utc_time}\n"
-        header += f"📊 ${data['price']:.2f} | OI: ${data['oi_usd']/1e6:.1f}M\n"
-        header += f"💸 {data['funding_pct']:.3f}% | L/S: {data['ls_ratio']:.2f}\n\n"
+        header += f"📊 ${data['price']:.2f} ({data['price_24h_change']:+.1f}% 24h) | OI: ${data['oi_usd']/1e6:.1f}M ({data['oi_24h_change']:+.1f}%)\n"
+        header += f"💸 {data['funding_pct']:.3f}% → {data['predicted_funding_pct']:.3f}% | L/S: {data['ls_ratio']:.2f}\n\n"
         
-        return header + analysis + "\n\n📈 Hourly"
+        return header + analysis + "\n\n📈 Hourly + o3"
     
     def run_hourly_analysis(self):
         """Main hourly analysis workflow"""
