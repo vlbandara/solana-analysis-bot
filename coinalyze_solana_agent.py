@@ -59,13 +59,34 @@ def _ts_minus(seconds: int) -> int:
 
 
 def _get(url: str, params: Dict[str, Any] | None = None) -> Any:
-    """Thin wrapper around GET with key & basic error handling."""
+    """Thin wrapper around GET with API key handling & clearer errors.
+
+    Raises
+    ------
+    RuntimeError
+        If the `COINALYZE_API_KEY` environment variable is missing.
+    requests.HTTPError
+        Propagated if the response status is not 2xx. Adds hint when 401.
+    """
     params = params.copy() if params else {}
+
     api_key = os.getenv("COINALYZE_API_KEY")
-    if api_key:
-        params["api_key"] = api_key
-    resp = requests.get(f"{API_BASE}{url}", params=params, timeout=15)
-    resp.raise_for_status()
+    if not api_key:
+        raise RuntimeError(
+            "COINALYZE_API_KEY environment variable not set – sign up at https://coinalyze.net to obtain a free key "
+            "and export it before running."
+        )
+
+    # The API accepts the key via header or query param. Use header to avoid exposing it in logs.
+    headers = {"api_key": api_key}
+
+    resp = requests.get(f"{API_BASE}{url}", params=params, headers=headers, timeout=15)
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as exc:
+        if resp.status_code == 401:
+            raise RuntimeError("Unauthorized (401) – check that your COINALYZE_API_KEY is correct & still active") from exc
+        raise
     return resp.json()
 
 ################################################################################
@@ -188,13 +209,15 @@ def fetch_24h_series(agent: "CoinalyzeDataAgent") -> Dict[str, list[float]]:
             "convert_to_usd": "true",
         },
     )[0]["history"]
-    oi_series = [float(x.get("v") or x.get("value", 0)) for x in oi_hist][-24:]
+    # Prefer close price 'c'; fall back to 'v' or 'value' for backward compatibility
+    oi_series = [float(x.get("c") or x.get("v") or x.get("value", 0)) for x in oi_hist][-24:]
 
     fr_hist = _get(
         "/funding-rate-history",
         {**base_params, "symbols": agent.perp_symbol},
     )[0]["history"]
-    fr_series = [float(x.get("v") or x.get("value", 0)) for x in fr_hist][-24:]
+    # Funding rate history returns OHLC; use close 'c' when present
+    fr_series = [float(x.get("c") or x.get("v") or x.get("value", 0)) for x in fr_hist][-24:]
 
     lq_hist = _get(
         "/liquidation-history",
