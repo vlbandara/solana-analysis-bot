@@ -422,46 +422,16 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             if use_template and template_sid:
                 try:
                     print(f"📋 Using WhatsApp template: {template_sid}")
-                    # Parse message for template variables
-                    lines = message.strip().split('\n')
+                    # Simple template with the entire message as one variable
+                    # This works better with Twilio's template system
                     
-                    # Extract key data for template variables
-                    price = "N/A"
-                    oi = "N/A" 
-                    funding = "N/A"
-                    bias = "NEUTRAL"
-                    insight = "Market analysis in progress"
-                    
-                    for line in lines:
-                        if "📊 $" in line and "|" in line:
-                            price_part = line.split("$")[1].split("|")[0].strip()
-                            oi_part = line.split("OI:")[1].split("(")[0].strip() if "OI:" in line else "N/A"
-                            price = price_part
-                            oi = oi_part
-                        elif "💸 Funding:" in line:
-                            funding = line.split("Funding:")[1].split("|")[0].strip() if "Funding:" in line else "N/A"
-                        elif "🎯 BIAS:" in line:
-                            bias = line.split("BIAS:")[1].strip()
-                        elif "📊 KEY INSIGHT:" in line:
-                            # Get next few lines for insight
-                            idx = lines.index(line)
-                            insight_lines = []
-                            for i in range(idx + 1, min(idx + 3, len(lines))):
-                                if lines[i].strip() and not lines[i].startswith(('⚠️', '💡', '📈')):
-                                    insight_lines.append(lines[i].strip())
-                            insight = ' '.join(insight_lines)[:100] + "..." if len(' '.join(insight_lines)) > 100 else ' '.join(insight_lines)
-                    
-                    # Send template message
+                    # Send template message with correct parameter names
                     twilio_message = self.twilio_client.messages.create(
                         from_=from_param,
                         to=to_param,
-                        content_sid=template_sid,
-                        content_variables=json.dumps({
-                            "1": price,        # SOL price
-                            "2": oi,          # Open Interest  
-                            "3": funding,     # Funding rate
-                            "4": bias,        # Market bias
-                            "5": insight      # Key insight
+                        contentSid=template_sid,  # Correct parameter name: contentSid
+                        contentVariables=json.dumps({
+                            "1": message  # Send entire formatted message as variable 1
                         })
                     )
                     print("✅ Template message sent successfully")
