@@ -1,0 +1,40 @@
+name: Test WhatsApp Connectivity
+
+on:
+  # Allow manual trigger only
+  workflow_dispatch:
+
+jobs:
+  test-whatsapp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install uv (dependency manager)
+        run: |
+          pip install --upgrade pip
+          pip install uv
+
+      - name: Install project dependencies
+        run: |
+          uv sync
+
+      - name: Test WhatsApp Connectivity
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+          WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
+          AUTO_SEND_TO_WHATSAPP: "true"
+        run: |
+          echo "🧪 Testing WhatsApp connectivity..."
+          uv run python enhanced_solana_workflow.py --test-whatsapp
+          echo "✅ WhatsApp test completed!"

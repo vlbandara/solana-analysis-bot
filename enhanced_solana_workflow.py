@@ -385,7 +385,7 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
         return message.strip()
     
     def send_to_whatsapp(self, message: str) -> bool:
-        """Send message to WhatsApp via Twilio"""
+        """Send message to WhatsApp via Twilio with enhanced debugging"""
         if not self.twilio_client:
             print("❌ Twilio client not available")
             return False
@@ -395,7 +395,7 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             return False
         
         try:
-            # Try TWILIO_WHATSAPP_FROM first, fallback to TWILIO_WHATSAPP_NUMBER
+            # Get WhatsApp numbers from environment
             from_number = os.getenv('TWILIO_WHATSAPP_FROM') or os.getenv('TWILIO_WHATSAPP_NUMBER')
             to_number = os.getenv('WHATSAPP_TO_NUMBER')
             
@@ -409,20 +409,61 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             from_param = f'whatsapp:{from_number}'
             to_param = f'whatsapp:{to_number}'
             
-            print(f"📱 Sending to WhatsApp: {to_number}")
-            print(f"📱 From WhatsApp: {from_number}")
+            print(f"📱 Sending to WhatsApp: {to_number[-4:].rjust(4, '*')}")  # Mask number for security
+            print(f"📱 From WhatsApp: {from_number[-4:].rjust(4, '*')}")
+            print(f"📏 Message length: {len(message)} chars")
             
+            # Send message
             twilio_message = self.twilio_client.messages.create(
                 from_=from_param,
                 body=message,
                 to=to_param
             )
             
-            print(f"✅ Message sent: {twilio_message.sid}")
-            return True
+            print(f"✅ Message sent to Twilio: {twilio_message.sid}")
+            
+            # Enhanced status checking
+            import time
+            time.sleep(2)  # Wait a bit for status update
+            
+            try:
+                # Fetch message status
+                updated_message = self.twilio_client.messages(twilio_message.sid).fetch()
+                status = updated_message.status
+                error_code = updated_message.error_code
+                error_message = updated_message.error_message
+                
+                print(f"📊 Message status: {status}")
+                if error_code:
+                    print(f"❌ Error code: {error_code}")
+                if error_message:
+                    print(f"❌ Error message: {error_message}")
+                
+                if status in ['delivered', 'sent', 'queued']:
+                    print("✅ WhatsApp message should be delivered")
+                    return True
+                elif status == 'failed':
+                    print(f"❌ WhatsApp delivery failed: {error_message or 'Unknown error'}")
+                    return False
+                else:
+                    print(f"⚠️ WhatsApp message status: {status}")
+                    return True  # Consider sent even if status is unclear
+                    
+            except Exception as status_error:
+                print(f"⚠️ Could not check message status: {status_error}")
+                return True  # Message was sent, just can't check status
             
         except Exception as e:
             print(f"❌ WhatsApp send error: {e}")
+            # Check if it's a specific Twilio error
+            if hasattr(e, 'code'):
+                print(f"❌ Twilio error code: {e.code}")
+                if e.code == 63016:
+                    print("💡 Tip: Your WhatsApp number may not be opted into the sandbox")
+                elif e.code == 63017:
+                    print("💡 Tip: 24-hour session window may have expired")
+                elif e.code == 21610:
+                    print("💡 Tip: Phone number is not accessible via WhatsApp")
             return False
     
     def run_analysis(self, send_whatsapp: bool = True) -> Dict[str, Any]:
@@ -475,16 +516,50 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             json.dump(results, f, indent=2)
         
         print(f"💾 Comprehensive results saved to enhanced_analysis.json")
+        
+        # Add WhatsApp troubleshooting info if message wasn't sent
+        if send_whatsapp and not whatsapp_sent:
+            print("\n" + "="*50)
+            print("📱 WHATSAPP TROUBLESHOOTING TIPS:")
+            print("="*50)
+            print("1. Check if your number is opted into Twilio WhatsApp sandbox")
+            print("2. Send 'join <sandbox-keyword>' to the Twilio WhatsApp number first")
+            print("3. Verify 24-hour session window hasn't expired")
+            print("4. Ensure phone numbers include country code (e.g., +1234567890)")
+            print("5. Check Twilio Console for message delivery logs")
+            print("="*50)
+        
         return results
 
 def main():
     """Main entry point for SOL derivatives analysis"""
     parser = argparse.ArgumentParser(description="SOL Derivatives Analysis Agent - 7-day pattern analysis with o3 insights")
     parser.add_argument("--no-whatsapp", action="store_true", help="Skip WhatsApp sending")
+    parser.add_argument("--test-whatsapp", action="store_true", help="Test WhatsApp connectivity only")
     args = parser.parse_args()
     
     try:
         workflow = EnhancedSolanaWorkflow()
+        
+        # Test WhatsApp only
+        if args.test_whatsapp:
+            print("🧪 Testing WhatsApp connectivity...")
+            test_message = f"""
+🧪 WhatsApp Test Message
+⏰ {datetime.now(timezone.utc).strftime('%H:%M UTC')}
+
+This is a test message to verify WhatsApp connectivity for the SOL Derivatives Analysis Agent.
+
+📈 If you receive this, your setup is working correctly!
+"""
+            success = workflow.send_to_whatsapp(test_message.strip())
+            if success:
+                print("✅ WhatsApp test completed - check your phone!")
+            else:
+                print("❌ WhatsApp test failed - check configuration")
+            return 0 if success else 1
+        
+        # Run full analysis
         results = workflow.run_analysis(send_whatsapp=not args.no_whatsapp)
         print("✅ SOL derivatives analysis completed successfully!")
         print(f"📊 Analyzed {len(results['derivatives_data']['open_interest']['history'])} hours of data")
