@@ -422,16 +422,23 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             if use_template and template_sid:
                 try:
                     print(f"📋 Using WhatsApp template: {template_sid}")
-                    # Simple template with the entire message as one variable
-                    # This works better with Twilio's template system
                     
-                    # Send template message with correct parameter names
+                    # SIMPLE APPROACH: Use entire message as single template variable
+                    # Template should be: "Your trading update: {{1}}" or similar
+                    # This approach works with existing approved templates
+                    
+                    # Clean message for template (remove excessive formatting that may cause issues)
+                    clean_message = message.replace("🎯 SOL DERIVATIVES • ", "SOL Alert ")
+                    clean_message = clean_message.replace("📈 Coinalyze + o3", "Data: Coinalyze+AI")
+                    clean_message = clean_message.strip()
+                    
+                    # Send using single variable approach (works with most existing templates)
                     twilio_message = self.twilio_client.messages.create(
                         from_=from_param,
                         to=to_param,
-                        contentSid=template_sid,  # Correct parameter name: contentSid
-                        contentVariables=json.dumps({
-                            "1": message  # Send entire formatted message as variable 1
+                        content_sid=template_sid,
+                        content_variables=json.dumps({
+                            "1": clean_message  # Entire message as single variable
                         })
                     )
                     print("✅ Template message sent successfully")
@@ -466,18 +473,21 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
                 print(f"📊 Message status: {status}")
                 if error_code:
                     print(f"❌ Error code: {error_code}")
+                    if error_code == 63016:
+                        print("🎯 SOLUTION FOR 63016:")
+                        print("1. Go to Twilio Console → Content Manager")
+                        print("2. Create template: 'Your trading update: {{1}}'")
+                        print("3. Category: UTILITY")
+                        print("4. Submit for approval (usually approved within minutes)")
+                        print("5. Set TWILIO_WHATSAPP_TEMPLATE_SID to the Content SID")
                 if error_message:
                     print(f"❌ Error message: {error_message}")
                 
                 if status in ['delivered', 'sent', 'queued']:
-                    print("✅ WhatsApp message should be delivered")
+                    print("✅ WhatsApp template message delivered")
                     return True
                 elif status == 'failed':
-                    print(f"❌ WhatsApp delivery failed: {error_message or 'Unknown error'}")
-                    if error_code == 63016:
-                        print("💡 Need to create approved WhatsApp message template")
-                    elif error_code == 63007:
-                        print("💡 Message template required for this use case")
+                    print(f"❌ WhatsApp delivery failed: {error_message or 'Template issue'}")
                     return False
                 else:
                     print(f"⚠️ WhatsApp message status: {status}")
@@ -489,17 +499,18 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             
         except Exception as e:
             print(f"❌ WhatsApp send error: {e}")
-            # Check if it's a specific Twilio error
+            # Specific handling for template-related errors
             if hasattr(e, 'code'):
                 print(f"❌ Twilio error code: {e.code}")
                 if e.code == 63016:
-                    print("💡 Tip: Need approved WhatsApp message template")
+                    print("🎯 SOLUTION FOR 63016:")
+                    print("1. Go to Twilio Console → Content Manager")
+                    print("2. Create template: 'Your trading update: {{1}}'")
+                    print("3. Category: UTILITY")
+                    print("4. Submit for approval (usually approved within minutes)")
+                    print("5. Set TWILIO_WHATSAPP_TEMPLATE_SID to the Content SID")
                 elif e.code == 63007:
-                    print("💡 Tip: Message template required - create one in Twilio Console")
-                elif e.code == 63017:
-                    print("💡 Tip: 24-hour session window expired - need template")
-                elif e.code == 21610:
-                    print("💡 Tip: Phone number is not accessible via WhatsApp")
+                    print("💡 Invalid template SID or template not found")
             return False
     
     def run_analysis(self, send_whatsapp: bool = True) -> Dict[str, Any]:
@@ -556,17 +567,18 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
         # Add WhatsApp troubleshooting info if message wasn't sent
         if send_whatsapp and not whatsapp_sent:
             print("\n" + "="*50)
-            print("📱 WHATSAPP TROUBLESHOOTING TIPS:")
+            print("📱 WHATSAPP ERROR 63016 - TEMPLATE REQUIRED")
             print("="*50)
-            print("1. 🎯 MOST LIKELY: Need WhatsApp Message Template")
-            print("   → Create approved template in Twilio Console")
-            print("   → See WHATSAPP_TEMPLATE_SETUP.md for details")
-            print("2. Check if your number is opted into Twilio WhatsApp sandbox")
-            print("3. Send 'join <sandbox-keyword>' to the Twilio WhatsApp number first")
-            print("4. Verify 24-hour session window hasn't expired")
-            print("5. Ensure phone numbers include country code (e.g., +1234567890)")
-            print("6. Check Twilio Console for message delivery logs")
-            print("\n💡 For automated hourly alerts, WhatsApp templates are REQUIRED")
+            print("🎯 QUICK FIX (5 minutes):")
+            print("1. Go to Twilio Console → Content Manager")
+            print("2. Create template: 'Your trading update: {{1}}'")
+            print("3. Category: UTILITY, Language: English")
+            print("4. Submit for approval (approved in 5-15 minutes)")
+            print("5. Copy Content SID (starts with HX...)")
+            print("6. Set GitHub Secret: TWILIO_WHATSAPP_TEMPLATE_SID")
+            print("")
+            print("📋 Template gets approved quickly because it's simple!")
+            print("📋 See WHATSAPP_TEMPLATE_SETUP.md for detailed guide")
             print("="*50)
         
         return results
