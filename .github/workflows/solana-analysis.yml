@@ -41,7 +41,7 @@ jobs:
           AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
         run: |
           echo "🚀 Starting SOL Derivatives Analysis..."
-          uv run python o3_pattern_workflow.py
+          uv run python single_o3_solana_agent.py --whatsapp
           echo "✅ Analysis completed successfully!"
 
       - name: Upload derivatives analysis results
@@ -49,5 +49,5 @@ jobs:
         if: always()
         with:
           name: sol-derivatives-analysis-results
-          path: enhanced_analysis.json
+          path: single_o3_analysis.json
           retention-days: 30
