@@ -28,7 +28,7 @@ jobs:
         run: |
           uv sync
 
-      - name: Run SOL Derivatives Analysis & Send WhatsApp Alert
+      - name: Run SOL Hourly Analysis & Send WhatsApp Alert
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
@@ -36,18 +36,16 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
-          TWILIO_WHATSAPP_TEMPLATE_SID: ${{ secrets.TWILIO_WHATSAPP_TEMPLATE_SID }}
-          TWILIO_USE_TEMPLATE: ${{ secrets.TWILIO_USE_TEMPLATE }}
-          AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
+          AUTO_SEND_TO_WHATSAPP: "true"
         run: |
-          echo "🚀 Starting SOL Derivatives Analysis..."
-          uv run python single_o3_solana_agent.py --whatsapp
+          echo "🚀 Starting SOL Hourly Analysis..."
+          uv run python sol_hourly_analysis.py
           echo "✅ Analysis completed successfully!"
 
-      - name: Upload derivatives analysis results
+      - name: Upload analysis state
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sol-derivatives-analysis-results
-          path: single_o3_analysis.json
-          retention-days: 30
+          name: sol-hourly-analysis-state
+          path: sol_analysis_state.json
+          retention-days: 7
