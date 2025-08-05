@@ -32,6 +32,22 @@ except ImportError:
 
 class EnhancedSolanaWorkflow:
     """Enhanced Solana analysis combining Coinalyze data with o3 AI analysis"""
+
+    # ------------------------------------------------------------------
+    # Helper formatting
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _fmt_usd(value: float) -> str:
+        """Format large USD values with K / M / B suffixes."""
+        abs_val = abs(value)
+        if abs_val >= 1_000_000_000:
+            return f"${value/1_000_000_000:.2f}B"
+        if abs_val >= 1_000_000:
+            return f"${value/1_000_000:.2f}M"
+        if abs_val >= 1_000:
+            return f"${value/1_000:.1f}K"
+        return f"${value:,.0f}"
+    """Enhanced Solana analysis combining Coinalyze data with o3 AI analysis"""
     
     def __init__(self):
         self.coinalyze_api_key = os.getenv("COINALYZE_API_KEY")
@@ -230,10 +246,10 @@ Focus on what matters for someone holding SOL positions. Use emojis and clear fo
 
 📊 DATA:
 💰 Price: ${coinalyze_data['current_price']:.2f}
-📈 OI (USD): ${coinalyze_data['open_interest']:,.0f}
+📈 OI: {self._fmt_usd(coinalyze_data['open_interest'])}
 💸 Funding: {coinalyze_data['funding_rate']*100:.4f}%
 ⚖️ L/S: {coinalyze_data['long_short_ratio']:.2f}
-🔥 Liq (USD): ${coinalyze_data['long_liquidations']:,.0f}L / ${coinalyze_data['short_liquidations']:,.0f}S
+🔥 Liq: {self._fmt_usd(coinalyze_data['long_liquidations'])}L / {self._fmt_usd(coinalyze_data['short_liquidations'])}S
 
 {o3_analysis}
 
