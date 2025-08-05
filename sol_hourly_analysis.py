@@ -37,14 +37,17 @@ class HourlySolAnalysis:
         self.state_file = 'sol_analysis_state.json'
     
     def _api_get(self, endpoint, params=None):
-        """Safe API call"""
+        """Safe API call with debug info"""
         try:
             url = f"https://api.coinalyze.net/v1{endpoint}"
             response = self.session.get(url, params=params, timeout=10)
             if response.status_code == 200:
                 return response.json()
-            return None
-        except:
+            else:
+                print(f"⚠️ API {endpoint} returned {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"⚠️ API {endpoint} error: {e}")
             return None
     
     def get_current_snapshot(self):
@@ -54,101 +57,133 @@ class HourlySolAnalysis:
         now = int(time.time())
         
         # 1. Current price + 24h history
-        price_data = self._api_get("/ohlcv-history", {
-            "symbols": self.perp_symbol,
-            "interval": "1hour", 
-            "from": now - (24 * 3600),
-            "to": now
-        })
-        
         current_price = 0
         price_24h_change = 0
-        if price_data and price_data[0].get('history'):
-            history = price_data[0]['history']
-            current_price = float(history[-1]['c'])
-            if len(history) > 1:
-                price_24h_ago = float(history[0]['c'])
-                price_24h_change = (current_price - price_24h_ago) / price_24h_ago * 100
+        try:
+            price_data = self._api_get("/ohlcv-history", {
+                "symbols": self.perp_symbol,
+                "interval": "1hour", 
+                "from": now - (24 * 3600),
+                "to": now
+            })
+            
+            if price_data and price_data[0].get('history'):
+                history = price_data[0]['history']
+                current_price = float(history[-1]['c'])
+                if len(history) > 1:
+                    price_24h_ago = float(history[0]['c'])
+                    price_24h_change = (current_price - price_24h_ago) / price_24h_ago * 100
+        except Exception as e:
+            print(f"⚠️ Price data error: {e}")
         
         # 2. Open Interest + 24h change
-        oi_data = self._api_get("/open-interest", {
-            "symbols": self.perp_symbol,
-            "convert_to_usd": "true"
-        })
-        oi_usd = float(oi_data[0]['value']) if oi_data else 0
-        
-        oi_history = self._api_get("/open-interest-history", {
-            "symbols": self.perp_symbol,
-            "interval": "1hour",
-            "from": now - (24 * 3600),
-            "to": now,
-            "convert_to_usd": "true"
-        })
-        
+        oi_usd = 0
         oi_24h_change = 0
-        if oi_history and oi_history[0].get('history'):
-            history = oi_history[0]['history'] 
-            if len(history) > 1:
-                oi_24h_ago = float(history[0]['v'])
-                oi_24h_change = (oi_usd - oi_24h_ago) / oi_24h_ago * 100
+        try:
+            oi_data = self._api_get("/open-interest", {
+                "symbols": self.perp_symbol,
+                "convert_to_usd": "true"
+            })
+            oi_usd = float(oi_data[0]['value']) if oi_data else 0
+            
+            oi_history = self._api_get("/open-interest-history", {
+                "symbols": self.perp_symbol,
+                "interval": "1hour",
+                "from": now - (24 * 3600),
+                "to": now,
+                "convert_to_usd": "true"
+            })
+            
+            if oi_history and oi_history[0].get('history'):
+                history = oi_history[0]['history'] 
+                if len(history) > 1:
+                    # Try different possible field names for OI value
+                    oi_24h_ago = 0
+                    first_record = history[0]
+                    if 'v' in first_record:
+                        oi_24h_ago = float(first_record['v'])
+                    elif 'value' in first_record:
+                        oi_24h_ago = float(first_record['value'])
+                    elif 'oi' in first_record:
+                        oi_24h_ago = float(first_record['oi'])
+                    
+                    if oi_24h_ago > 0:
+                        oi_24h_change = (oi_usd - oi_24h_ago) / oi_24h_ago * 100
+        except Exception as e:
+            print(f"⚠️ Open Interest data error: {e}")
         
         # 3. Funding Rate + predicted
-        funding_data = self._api_get("/funding-rate", {"symbols": self.perp_symbol})
-        funding_rate = float(funding_data[0]['value']) * 100 if funding_data else 0
-        
-        predicted_funding = self._api_get("/predicted-funding-rate", {"symbols": self.perp_symbol})
-        predicted_funding_rate = float(predicted_funding[0]['value']) * 100 if predicted_funding else 0
+        funding_rate = 0
+        predicted_funding_rate = 0
+        try:
+            funding_data = self._api_get("/funding-rate", {"symbols": self.perp_symbol})
+            funding_rate = float(funding_data[0]['value']) * 100 if funding_data else 0
+            
+            predicted_funding = self._api_get("/predicted-funding-rate", {"symbols": self.perp_symbol})
+            predicted_funding_rate = float(predicted_funding[0]['value']) * 100 if predicted_funding else 0
+        except Exception as e:
+            print(f"⚠️ Funding data error: {e}")
         
         # 4. Long/Short Ratio + 24h patterns
-        ls_data = self._api_get("/long-short-ratio-history", {
-            "symbols": self.perp_symbol,
-            "interval": "1hour",
-            "from": now - (24 * 3600), 
-            "to": now
-        })
-        
         ls_ratio = 0
         ls_24h_avg = 0
         ls_24h_change = 0
-        if ls_data and ls_data[0].get('history'):
-            history = ls_data[0]['history']
-            if history:
-                ls_ratio = float(history[-1].get('r', 0))
-                # Calculate 24h average
-                ratios = [float(h.get('r', 0)) for h in history if h.get('r')]
-                ls_24h_avg = sum(ratios) / len(ratios) if ratios else 0
-                # Calculate 24h change
-                if len(history) > 1:
-                    ls_24h_ago = float(history[0].get('r', 0))
-                    if ls_24h_ago > 0:
-                        ls_24h_change = (ls_ratio - ls_24h_ago) / ls_24h_ago * 100
+        try:
+            ls_data = self._api_get("/long-short-ratio-history", {
+                "symbols": self.perp_symbol,
+                "interval": "1hour",
+                "from": now - (24 * 3600), 
+                "to": now
+            })
+            
+            if ls_data and ls_data[0].get('history'):
+                history = ls_data[0]['history']
+                if history:
+                    ls_ratio = float(history[-1].get('r', 0))
+                    # Calculate 24h average
+                    ratios = [float(h.get('r', 0)) for h in history if h.get('r')]
+                    ls_24h_avg = sum(ratios) / len(ratios) if ratios else 0
+                    # Calculate 24h change
+                    if len(history) > 1:
+                        ls_24h_ago = float(history[0].get('r', 0))
+                        if ls_24h_ago > 0:
+                            ls_24h_change = (ls_ratio - ls_24h_ago) / ls_24h_ago * 100
+        except Exception as e:
+            print(f"⚠️ Long/Short data error: {e}")
         
         # 5. Comprehensive liquidations (24h)
-        liq_data = self._api_get("/liquidation-history", {
-            "symbols": self.perp_symbol,
-            "interval": "1hour", 
-            "from": now - (24 * 3600),
-            "to": now,
-            "convert_to_usd": "true"
-        })
-        
         long_liq_24h = short_liq_24h = 0
         long_liq_6h = short_liq_6h = 0
-        if liq_data and liq_data[0].get('history'):
-            history = liq_data[0]['history']
-            for i, item in enumerate(history):
-                long_val = item.get('l', 0)
-                short_val = item.get('s', 0)
-                long_liq_24h += long_val
-                short_liq_24h += short_val
-                # Last 6 hours
-                if i >= len(history) - 6:
-                    long_liq_6h += long_val
-                    short_liq_6h += short_val
+        try:
+            liq_data = self._api_get("/liquidation-history", {
+                "symbols": self.perp_symbol,
+                "interval": "1hour", 
+                "from": now - (24 * 3600),
+                "to": now,
+                "convert_to_usd": "true"
+            })
+            
+            if liq_data and liq_data[0].get('history'):
+                history = liq_data[0]['history']
+                for i, item in enumerate(history):
+                    long_val = item.get('l', 0)
+                    short_val = item.get('s', 0)
+                    long_liq_24h += long_val
+                    short_liq_24h += short_val
+                    # Last 6 hours
+                    if i >= len(history) - 6:
+                        long_liq_6h += long_val
+                        short_liq_6h += short_val
+        except Exception as e:
+            print(f"⚠️ Liquidation data error: {e}")
         
         # 6. Basis (perp vs spot spread)
-        basis_data = self._api_get("/basis", {"symbols": self.perp_symbol})
-        basis_pct = float(basis_data[0]['value']) * 100 if basis_data else 0
+        basis_pct = 0
+        try:
+            basis_data = self._api_get("/basis", {"symbols": self.perp_symbol})
+            basis_pct = float(basis_data[0]['value']) * 100 if basis_data else 0
+        except Exception as e:
+            print(f"⚠️ Basis data error: {e}")
         
         snapshot = {
             'timestamp': now,
@@ -389,6 +424,9 @@ Keep under 480 characters total for WhatsApp compatibility.
             
         except Exception as e:
             print(f"❌ Analysis failed: {e}")
+            import traceback
+            print("🔍 Full error traceback:")
+            traceback.print_exc()
 
 
 def main():
