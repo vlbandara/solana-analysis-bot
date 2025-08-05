@@ -41,7 +41,7 @@ jobs:
           AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
         run: |
           echo "🚀 Starting SOL Derivatives Analysis..."
-          uv run python enhanced_solana_workflow.py
+          uv run python o3_pattern_workflow.py
           echo "✅ Analysis completed successfully!"
 
       - name: Upload derivatives analysis results
