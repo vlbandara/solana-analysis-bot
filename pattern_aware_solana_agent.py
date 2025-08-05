@@ -323,7 +323,7 @@ class PatternAwareSolanaAgent:
         
         You are an expert derivatives trader analyzing SOL patterns. Provide:
         
-        1. 🎯 BIAS: BULLISH/BEARISH/NEUTRAL (based on pattern convergence)
+        1. 🎯 BIAS: BULLISH / BEARISH / NEUTRAL / UNCLEAR (only choose BULLISH or BEARISH if evidence is strong; otherwise respond UNCLEAR)
         
         2. 📊 KEY INSIGHT: Focus on the MOST SIGNIFICANT pattern change. What does the biggest shift tell us about market sentiment and positioning?
         
@@ -335,10 +335,11 @@ class PatternAwareSolanaAgent:
         - Focus on PATTERNS and CHANGES, not just current values
         - Highlight the most significant shifts in the data
         - Explain what these patterns indicate about trader behavior
+        - If patterns conflict or evidence is insufficient, clearly state bias as UNCLEAR
         - Keep it concise but insightful - suitable for quick trading decisions
         
         Format as:
-        🎯 BIAS: [DIRECTION]
+        🎯 BIAS: [DIRECTION or UNCLEAR]
         📊 KEY INSIGHT: [Most important pattern observation]
         ⚠️ TOP RISK: [Highest probability risk scenario]  
         💡 ACTION: [Specific recommendation]

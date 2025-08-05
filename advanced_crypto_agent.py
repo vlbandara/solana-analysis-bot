@@ -454,7 +454,7 @@ class AdvancedCryptoAgent:
         
         Focus on PATTERNS and TRENDS, not just current values. Provide:
         
-        🎯 BIAS: BULLISH/BEARISH/NEUTRAL
+        🎯 BIAS: BULLISH / BEARISH / NEUTRAL / UNCLEAR
         
         📊 KEY INSIGHT: The most significant pattern change that reveals market sentiment and positioning shifts. What does the data tell us about trader behavior?
         

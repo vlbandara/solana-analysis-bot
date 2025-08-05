@@ -279,7 +279,7 @@ def ai_direction(metrics: Dict[str, Any]) -> str:
 
     prompt = (
         "Provide a concise (max 2 sentences) directional view for SOL/USDT futures "
-        "based solely on the following derivative metrics. Respond with LONG, SHORT or NEUTRAL plus one brief justification.\n\n"
+        "based solely on the following derivative metrics. Respond with LONG, SHORT, NEUTRAL or UNCLEAR (if data is inconclusive) plus one brief justification.\n\n"
         f"Open Interest: {metrics['open_interest_usd']:.0f} USD\n"
         f"Funding Rate: {metrics['funding_rate']*100:.4f}%\n"
         f"Liquidations 1h – Long: {metrics['liquidations_long_usd_1h']:.0f} USD, Short: {metrics['liquidations_short_usd_1h']:.0f} USD\n"
