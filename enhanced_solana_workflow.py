@@ -187,9 +187,9 @@ Analyze this Coinalyze derivatives data and provide CONCISE, actionable insights
 
 MARKET DATA:
 - Price: ${coinalyze_data['current_price']:.2f}
-- Open Interest: {coinalyze_data['open_interest']:,.0f} SOL
+- Open Interest (USD): ${coinalyze_data['open_interest']:,.0f}
 - Funding Rate: {coinalyze_data['funding_rate']*100:.4f}% (annualized)
-- Liquidations (1h): {coinalyze_data['long_liquidations']:,.0f}L / {coinalyze_data['short_liquidations']:,.0f}S
+- Liquidations (1h, USD): ${coinalyze_data['long_liquidations']:,.0f} Longs / ${coinalyze_data['short_liquidations']:,.0f} Shorts
 - Long/Short Ratio: {coinalyze_data['long_short_ratio']:.2f}
 
 Provide a concise hourly update (max 300 words) with:
@@ -229,11 +229,11 @@ Focus on what matters for someone holding SOL positions. Use emojis and clear fo
 ⏰ {timestamp}
 
 📊 DATA:
-💰 ${coinalyze_data['current_price']:.2f}
-📈 OI: {coinalyze_data['open_interest']:,.0f} SOL
+💰 Price: ${coinalyze_data['current_price']:.2f}
+📈 OI (USD): ${coinalyze_data['open_interest']:,.0f}
 💸 Funding: {coinalyze_data['funding_rate']*100:.4f}%
 ⚖️ L/S: {coinalyze_data['long_short_ratio']:.2f}
-🔥 Liq: {coinalyze_data['long_liquidations']:,.0f}L/{coinalyze_data['short_liquidations']:,.0f}S
+🔥 Liq (USD): ${coinalyze_data['long_liquidations']:,.0f}L / ${coinalyze_data['short_liquidations']:,.0f}S
 
 {o3_analysis}
 
