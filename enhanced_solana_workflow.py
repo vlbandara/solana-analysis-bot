@@ -385,7 +385,7 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
         return message.strip()
     
     def send_to_whatsapp(self, message: str) -> bool:
-        """Send message to WhatsApp via Twilio with enhanced debugging"""
+        """Send message to WhatsApp via Twilio using message templates"""
         if not self.twilio_client:
             print("❌ Twilio client not available")
             return False
@@ -395,9 +395,11 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             return False
         
         try:
-            # Get WhatsApp numbers from environment
+            # Get WhatsApp numbers and template info from environment
             from_number = os.getenv('TWILIO_WHATSAPP_FROM') or os.getenv('TWILIO_WHATSAPP_NUMBER')
             to_number = os.getenv('WHATSAPP_TO_NUMBER')
+            template_sid = os.getenv('TWILIO_WHATSAPP_TEMPLATE_SID')
+            use_template = os.getenv('TWILIO_USE_TEMPLATE', 'true').lower() == 'true'
             
             if not from_number or not to_number:
                 print("❌ Missing WhatsApp numbers in environment")
@@ -412,19 +414,77 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             print(f"📱 Sending to WhatsApp: {to_number[-4:].rjust(4, '*')}")  # Mask number for security
             print(f"📱 From WhatsApp: {from_number[-4:].rjust(4, '*')}")
             print(f"📏 Message length: {len(message)} chars")
+            print(f"🔧 Template mode: {'ON' if use_template else 'OFF'}")
             
-            # Send message
-            twilio_message = self.twilio_client.messages.create(
-                from_=from_param,
-                body=message,
-                to=to_param
-            )
+            # Try template message first, fallback to regular message
+            twilio_message = None
+            
+            if use_template and template_sid:
+                try:
+                    print(f"📋 Using WhatsApp template: {template_sid}")
+                    # Parse message for template variables
+                    lines = message.strip().split('\n')
+                    
+                    # Extract key data for template variables
+                    price = "N/A"
+                    oi = "N/A" 
+                    funding = "N/A"
+                    bias = "NEUTRAL"
+                    insight = "Market analysis in progress"
+                    
+                    for line in lines:
+                        if "📊 $" in line and "|" in line:
+                            price_part = line.split("$")[1].split("|")[0].strip()
+                            oi_part = line.split("OI:")[1].split("(")[0].strip() if "OI:" in line else "N/A"
+                            price = price_part
+                            oi = oi_part
+                        elif "💸 Funding:" in line:
+                            funding = line.split("Funding:")[1].split("|")[0].strip() if "Funding:" in line else "N/A"
+                        elif "🎯 BIAS:" in line:
+                            bias = line.split("BIAS:")[1].strip()
+                        elif "📊 KEY INSIGHT:" in line:
+                            # Get next few lines for insight
+                            idx = lines.index(line)
+                            insight_lines = []
+                            for i in range(idx + 1, min(idx + 3, len(lines))):
+                                if lines[i].strip() and not lines[i].startswith(('⚠️', '💡', '📈')):
+                                    insight_lines.append(lines[i].strip())
+                            insight = ' '.join(insight_lines)[:100] + "..." if len(' '.join(insight_lines)) > 100 else ' '.join(insight_lines)
+                    
+                    # Send template message
+                    twilio_message = self.twilio_client.messages.create(
+                        from_=from_param,
+                        to=to_param,
+                        content_sid=template_sid,
+                        content_variables=json.dumps({
+                            "1": price,        # SOL price
+                            "2": oi,          # Open Interest  
+                            "3": funding,     # Funding rate
+                            "4": bias,        # Market bias
+                            "5": insight      # Key insight
+                        })
+                    )
+                    print("✅ Template message sent successfully")
+                    
+                except Exception as template_error:
+                    print(f"⚠️ Template message failed: {template_error}")
+                    print("🔄 Falling back to regular message...")
+                    twilio_message = None
+            
+            # Fallback to regular message if template failed or not configured
+            if not twilio_message:
+                print("📝 Sending as regular WhatsApp message")
+                twilio_message = self.twilio_client.messages.create(
+                    from_=from_param,
+                    body=message,
+                    to=to_param
+                )
             
             print(f"✅ Message sent to Twilio: {twilio_message.sid}")
             
             # Enhanced status checking
             import time
-            time.sleep(2)  # Wait a bit for status update
+            time.sleep(3)  # Wait a bit for status update
             
             try:
                 # Fetch message status
@@ -444,6 +504,10 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
                     return True
                 elif status == 'failed':
                     print(f"❌ WhatsApp delivery failed: {error_message or 'Unknown error'}")
+                    if error_code == 63016:
+                        print("💡 Need to create approved WhatsApp message template")
+                    elif error_code == 63007:
+                        print("💡 Message template required for this use case")
                     return False
                 else:
                     print(f"⚠️ WhatsApp message status: {status}")
@@ -459,9 +523,11 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             if hasattr(e, 'code'):
                 print(f"❌ Twilio error code: {e.code}")
                 if e.code == 63016:
-                    print("💡 Tip: Your WhatsApp number may not be opted into the sandbox")
+                    print("💡 Tip: Need approved WhatsApp message template")
+                elif e.code == 63007:
+                    print("💡 Tip: Message template required - create one in Twilio Console")
                 elif e.code == 63017:
-                    print("💡 Tip: 24-hour session window may have expired")
+                    print("💡 Tip: 24-hour session window expired - need template")
                 elif e.code == 21610:
                     print("💡 Tip: Phone number is not accessible via WhatsApp")
             return False
@@ -522,11 +588,15 @@ Keep it punchy, logical, and WhatsApp-friendly. No fluff.
             print("\n" + "="*50)
             print("📱 WHATSAPP TROUBLESHOOTING TIPS:")
             print("="*50)
-            print("1. Check if your number is opted into Twilio WhatsApp sandbox")
-            print("2. Send 'join <sandbox-keyword>' to the Twilio WhatsApp number first")
-            print("3. Verify 24-hour session window hasn't expired")
-            print("4. Ensure phone numbers include country code (e.g., +1234567890)")
-            print("5. Check Twilio Console for message delivery logs")
+            print("1. 🎯 MOST LIKELY: Need WhatsApp Message Template")
+            print("   → Create approved template in Twilio Console")
+            print("   → See WHATSAPP_TEMPLATE_SETUP.md for details")
+            print("2. Check if your number is opted into Twilio WhatsApp sandbox")
+            print("3. Send 'join <sandbox-keyword>' to the Twilio WhatsApp number first")
+            print("4. Verify 24-hour session window hasn't expired")
+            print("5. Ensure phone numbers include country code (e.g., +1234567890)")
+            print("6. Check Twilio Console for message delivery logs")
+            print("\n💡 For automated hourly alerts, WhatsApp templates are REQUIRED")
             print("="*50)
         
         return results

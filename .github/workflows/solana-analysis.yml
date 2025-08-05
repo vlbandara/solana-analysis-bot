@@ -36,6 +36,8 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
+          TWILIO_WHATSAPP_TEMPLATE_SID: ${{ secrets.TWILIO_WHATSAPP_TEMPLATE_SID }}
+          TWILIO_USE_TEMPLATE: ${{ secrets.TWILIO_USE_TEMPLATE }}
           AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
         run: |
           echo "🚀 Starting SOL Derivatives Analysis..."
