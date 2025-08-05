@@ -179,6 +179,43 @@ class EnhancedSolanaWorkflow:
             print(f"   ❌ Price error: {e}")
             current_price = 0
         
+        # ------------------------------------------------------------
+        # Fetch 24-hour history to compute deltas
+        # ------------------------------------------------------------
+        trend: Dict[str, float] = {}
+        try:
+            to_ts = int(time.time())
+            from_ts = to_ts - 86400  # last 24 h
+
+            base_params = {"interval": "1hour", "from": from_ts, "to": to_ts}
+
+            oi_hist = _get(
+                "/open-interest-history",
+                {
+                    **base_params,
+                    "symbols": "SOLUSDT_PERP.A",
+                    "convert_to_usd": "true",
+                },
+            )[0]["history"]
+            if oi_hist:
+                trend["open_interest_delta_24h"] = open_interest - float(oi_hist[0].get("c") or oi_hist[0].get("v") or oi_hist[0].get("value", 0))
+
+            fr_hist = _get(
+                "/funding-rate-history",
+                {**base_params, "symbols": "SOLUSDT_PERP.A"},
+            )[0]["history"]
+            if fr_hist:
+                trend["funding_rate_delta_24h"] = funding_rate - float(fr_hist[0].get("c") or fr_hist[0].get("v") or fr_hist[0].get("value", 0))
+
+            price_hist = _get(
+                "/ohlcv-history",
+                {**base_params, "symbols": "SOLUSDT_PERP.A"},
+            )[0]["history"]
+            if price_hist:
+                trend["price_delta_24h"] = current_price - float(price_hist[0]["c"])
+        except Exception as e:
+            print(f"⚠️ Trend fetch error: {e}")
+
         return {
             "open_interest": open_interest,
             "funding_rate": funding_rate,
@@ -186,7 +223,8 @@ class EnhancedSolanaWorkflow:
             "short_liquidations": short_liquidations,
             "long_short_ratio": long_short_ratio,
             "current_price": current_price,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            **trend,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     
     def analyze_with_o3(self, coinalyze_data: Dict[str, Any]) -> str:
@@ -206,6 +244,9 @@ MARKET DATA:
 - Open Interest (USD): ${coinalyze_data['open_interest']:,.0f}
 - Funding Rate: {coinalyze_data['funding_rate']*100:.4f}% (annualized)
 - Liquidations (1h, USD): ${coinalyze_data['long_liquidations']:,.0f} Longs / ${coinalyze_data['short_liquidations']:,.0f} Shorts
+- OI Δ24h: {coinalyze_data.get('open_interest_delta_24h', 'N/A'):,}
+- Price Δ24h: {coinalyze_data.get('price_delta_24h', 'N/A'):.2f}
+- Funding Δ24h: {coinalyze_data.get('funding_rate_delta_24h', 'N/A'):.6f}
 - Long/Short Ratio: {coinalyze_data['long_short_ratio']:.2f}
 
 Provide a concise hourly update (max 300 words) with:
@@ -250,6 +291,9 @@ Focus on what matters for someone holding SOL positions. Use emojis and clear fo
 💸 Funding: {coinalyze_data['funding_rate']*100:.4f}%
 ⚖️ L/S: {coinalyze_data['long_short_ratio']:.2f}
 🔥 Liq: {self._fmt_usd(coinalyze_data['long_liquidations'])}L / {self._fmt_usd(coinalyze_data['short_liquidations'])}S
+📈 OI Δ24h: {self._fmt_usd(coinalyze_data.get('open_interest_delta_24h',0))}
+💰 Price Δ24h: {coinalyze_data.get('price_delta_24h',0):+.2f}
+💸 Funding Δ24h: {coinalyze_data.get('funding_rate_delta_24h',0):+.6f}
 
 {o3_analysis}
 
