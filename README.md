@@ -5,11 +5,12 @@ Simple, robust hourly SOL derivatives analysis with WhatsApp alerts.
 ## 🚀 How It Works
 
 **Every hour, the bot:**
-1. 📊 Gets SOL data snapshot (price, OI, funding, L/S ratio)
+1. 📊 Gets comprehensive SOL data (15+ metrics with 24h patterns)
 2. 🔍 Compares with last analysis to detect significant changes
-3. 🧠 Generates analysis with reasoning (using o3 model)
+3. 🧠 Generates rich analysis with reasoning (using o3 model)
 4. 📱 Sends WhatsApp alert only if changes are meaningful
 5. 💾 Saves state to avoid duplicate messages
+6. 🛡️ Robust error handling continues even if some APIs fail
 
 ## 📁 Core Files
 
@@ -46,18 +47,18 @@ AUTO_SEND_TO_WHATSAPP="true"
 ## 📊 Analysis Format
 
 ```
-🎯 SOL • 15:30 UTC
-📊 $167.51 | OI: $1.52M
-💸 -0.212% | L/S: 3.01
+🎯 SOL • 15:45 UTC
+📊 $163.55 (-2.3% 24h) | OI: $1498.5M (+3.2%)
+💸 -0.212% → -0.267% | L/S: 3.22
 
 🎯 BIAS: BEARISH
-📊 KEY INSIGHT: L/S 3.0 vs funding -0.212% shows retail longs 
-crowded while institutions short perps. Smart money vs retail.
-⚠️ TOP RISK: Long cascade below $162 as overleveraged exit
-💡 ACTION: Short bounces to $171, target $159. Negative 
-funding makes carry profitable.
+📊 KEY INSIGHT: L/S 3.2 vs funding -0.21% shows retail crowded 
+long while smart money shorts. Basis -0.04% confirms perp discount.
+⚠️ TOP RISK: Long liquidations above $8M could cascade if price 
+breaks support
+💡 ACTION: Short rallies above current price, target breakdown levels
 
-📈 Hourly
+📈 Hourly + o3
 ```
 
 ## 🚀 Usage
@@ -80,6 +81,18 @@ python sol_hourly_analysis.py
 
 **Reasoning included:** Shows WHY each conclusion was reached.
 
+## 🛡️ Robust Error Handling
+
+**Production-ready reliability:**
+- ✅ Individual API calls wrapped in try/catch blocks
+- ✅ Continues analysis even if some data sources fail
+- ✅ Flexible field parsing (handles different API response formats)
+- ✅ Meaningful error messages for debugging
+- ✅ Fallback analysis when o3 model fails
+- ✅ Never crashes, always provides some analysis
+
+**Result: Works in production even with API hiccups! 🚀**
+
 ---
 
-**Simple. Robust. No complexity. Just works. 🎯**
+**Simple. Robust. Comprehensive. Just works. 🎯**
