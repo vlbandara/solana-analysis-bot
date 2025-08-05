@@ -1,14 +1,14 @@
-name: Enhanced SOL Analysis with o3
+name: SOL Derivatives Analysis Agent
 
 on:
-  # Run every hour at minute 0
+  # Run every hour at minute 0 for hourly derivatives analysis
   schedule:
     - cron: '0 * * * *'
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
 
 jobs:
-  enhanced-analysis:
+  sol-derivatives-analysis:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,25 +28,24 @@ jobs:
         run: |
           uv sync
 
-      - name: Run Enhanced Solana Analysis & Send WhatsApp
+      - name: Run SOL Derivatives Analysis & Send WhatsApp Alert
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
           AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
-          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
-          BINANCE_SECRET_KEY: ${{ secrets.BINANCE_SECRET_KEY }}
         run: |
+          echo "🚀 Starting SOL Derivatives Analysis..."
           uv run python enhanced_solana_workflow.py
+          echo "✅ Analysis completed successfully!"
 
-      - name: Upload analysis results
+      - name: Upload derivatives analysis results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: enhanced-analysis-results
+          name: sol-derivatives-analysis-results
           path: enhanced_analysis.json
-          retention-days: 7
+          retention-days: 30

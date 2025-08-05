@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Enhanced Solana Workflow
-Combines Coinalyze data with o3 analysis for comprehensive market insights
-Sends concise analysis to WhatsApp via Twilio
+SOL Derivatives Analysis Agent
+Focused derivatives analysis using 7-day Coinalyze data patterns with o3 AI insights.
+Analyzes: Open Interest, Funding Rates, Liquidations, Long/Short Ratios, and Basis.
+Provides directional advice for SOL position holders via WhatsApp.
 """
 
 import os
@@ -31,23 +32,52 @@ except ImportError:
     print("⚠️ Twilio not installed. Run: uv add twilio")
 
 class EnhancedSolanaWorkflow:
-    """Enhanced Solana analysis combining Coinalyze data with o3 AI analysis"""
+    """SOL Derivatives Analysis Agent - Sharp analysis for position holders"""
 
     # ------------------------------------------------------------------
-    # Helper formatting
+    # Helper formatting and utilities
     # ------------------------------------------------------------------
     @staticmethod
     def _fmt_usd(value: float) -> str:
         """Format large USD values with K / M / B suffixes."""
+        if value == 0:
+            return "$0"
         abs_val = abs(value)
         if abs_val >= 1_000_000_000:
             return f"${value/1_000_000_000:.2f}B"
-        if abs_val >= 1_000_000:
+        elif abs_val >= 1_000_000:
             return f"${value/1_000_000:.2f}M"
-        if abs_val >= 1_000:
+        elif abs_val >= 1_000:
             return f"${value/1_000:.1f}K"
-        return f"${value:,.0f}"
-    """Enhanced Solana analysis combining Coinalyze data with o3 AI analysis"""
+        else:
+            return f"${value:,.0f}"
+    
+    @staticmethod
+    def _fmt_percentage(value: float, decimals: int = 2) -> str:
+        """Format percentage with proper precision."""
+        return f"{value*100:.{decimals}f}%"
+    
+    @staticmethod
+    def _fmt_ratio(value: float) -> str:
+        """Format ratio with appropriate precision."""
+        return f"{value:.2f}"
+    
+    @staticmethod
+    def _calculate_correlation(x_data: list, y_data: list) -> float:
+        """Calculate correlation coefficient between two datasets."""
+        if len(x_data) != len(y_data) or len(x_data) < 2:
+            return 0.0
+        
+        import statistics
+        mean_x = statistics.mean(x_data)
+        mean_y = statistics.mean(y_data)
+        
+        numerator = sum((x - mean_x) * (y - mean_y) for x, y in zip(x_data, y_data))
+        sum_sq_x = sum((x - mean_x) ** 2 for x in x_data)
+        sum_sq_y = sum((y - mean_y) ** 2 for y in y_data)
+        
+        denominator = (sum_sq_x * sum_sq_y) ** 0.5
+        return numerator / denominator if denominator != 0 else 0.0
     
     def __init__(self):
         self.coinalyze_api_key = os.getenv("COINALYZE_API_KEY")
@@ -78,227 +108,319 @@ class EnhancedSolanaWorkflow:
             print("❌ Twilio library not available")
     
     def fetch_coinalyze_data(self) -> Dict[str, Any]:
-        """Fetch comprehensive data from Coinalyze API"""
-        print("🔍 Fetching Coinalyze data...")
+        """Fetch comprehensive 7-day derivatives data from Coinalyze API"""
+        print("🔍 Fetching 7-day SOL derivatives data...")
         
         headers = {"api_key": self.coinalyze_api_key}
         
         # Helper function for API calls
         def _get(endpoint: str, params: dict = None) -> dict:
             url = f"{self.coinalyze_base}{endpoint}"
-            response = requests.get(url, params=params, headers=headers, timeout=15)
+            response = requests.get(url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
             return response.json()
         
-        # Fetch open interest
-        try:
-            oi_data = _get("/open-interest", {"symbols": "SOLUSDT_PERP.A", "convert_to_usd": "true"})
-            open_interest = float(oi_data[0]["value"]) if oi_data else 0
-            print(f"   ✅ Open Interest: ${open_interest:,.0f}")
-        except Exception as e:
-            print(f"   ❌ Open Interest error: {e}")
-            open_interest = 0
+        import time
+        to_ts = int(time.time())
+        from_ts = to_ts - (7 * 24 * 3600)  # 7 days ago
         
-        # Fetch funding rate
-        try:
-            funding_data = _get("/funding-rate", {"symbols": "SOLUSDT_PERP.A"})
-            funding_rate = float(funding_data[0]["value"]) if funding_data else 0
-            print(f"   ✅ Funding Rate: {funding_rate:.6f}")
-        except Exception as e:
-            print(f"   ❌ Funding Rate error: {e}")
-            funding_rate = 0
+        base_params = {
+            "interval": "1hour",
+            "from": from_ts,
+            "to": to_ts,
+            "symbols": "SOLUSDT_PERP.A"
+        }
         
-        # Fetch liquidations (last hour)
-        try:
-            import time
-            to_ts = int(time.time())
-            from_ts = to_ts - 3600  # 1 hour ago
-            
-            liquidations_data = _get(
-                "/liquidation-history",
-                {
-                    "symbols": "SOLUSDT_PERP.A",
-                    "interval": "1hour",
-                    "from": from_ts,
-                    "to": to_ts,
-                    "convert_to_usd": "true",
-                }
-            )
-            
-            history = liquidations_data[0]["history"] if liquidations_data else []
-            long_liquidations = sum(item.get("l", 0) for item in history)
-            short_liquidations = sum(item.get("s", 0) for item in history)
-            
-            print(f"   ✅ Liquidations (1h): ${long_liquidations:,.0f}L/${short_liquidations:,.0f}S")
-        except Exception as e:
-            print(f"   ❌ Liquidations error: {e}")
-            long_liquidations = short_liquidations = 0
-        
-        # Fetch long/short ratio
-        try:
-            import time
-            to_ts = int(time.time())
-            from_ts = to_ts - 3600  # 1 hour ago
-            
-            ls_data = _get(
-                "/long-short-ratio-history",
-                {
-                    "symbols": "SOLUSDT_PERP.A",
-                    "interval": "1hour",
-                    "from": from_ts,
-                    "to": to_ts,
-                }
-            )
-            
-            history = ls_data[0]["history"] if ls_data else []
-            long_short_ratio = float(history[-1]["r"]) if history else 1.0
-            print(f"   ✅ Long/Short Ratio: {long_short_ratio:.2f}")
-        except Exception as e:
-            print(f"   ❌ Long/Short Ratio error: {e}")
-            long_short_ratio = 1.0
-        
-        # Fetch current price (using OHLCV)
-        try:
-            import time
-            to_ts = int(time.time())
-            from_ts = to_ts - 300  # last 5 minutes
-            
-            price_data = _get(
-                "/ohlcv-history",
-                {
-                    "symbols": "SOLUSDT_PERP.A",
-                    "interval": "1min",
-                    "from": from_ts,
-                    "to": to_ts,
-                }
-            )
-            
-            current_price = float(price_data[0]["history"][-1]["c"]) if price_data and price_data[0]["history"] else 0
-            print(f"   ✅ Current Price: ${current_price:.2f}")
-        except Exception as e:
-            print(f"   ❌ Price error: {e}")
-            current_price = 0
-        
-        # ------------------------------------------------------------
-        # Fetch 24-hour history to compute deltas
-        # ------------------------------------------------------------
-        trend: Dict[str, float] = {}
-        try:
-            to_ts = int(time.time())
-            from_ts = to_ts - 86400  # last 24 h
-
-            base_params = {"interval": "1hour", "from": from_ts, "to": to_ts}
-
-            oi_hist = _get(
-                "/open-interest-history",
-                {
-                    **base_params,
-                    "symbols": "SOLUSDT_PERP.A",
-                    "convert_to_usd": "true",
-                },
-            )[0]["history"]
-            if oi_hist:
-                trend["open_interest_delta_24h"] = open_interest - float(oi_hist[0].get("c") or oi_hist[0].get("v") or oi_hist[0].get("value", 0))
-
-            fr_hist = _get(
-                "/funding-rate-history",
-                {**base_params, "symbols": "SOLUSDT_PERP.A"},
-            )[0]["history"]
-            if fr_hist:
-                trend["funding_rate_delta_24h"] = funding_rate - float(fr_hist[0].get("c") or fr_hist[0].get("v") or fr_hist[0].get("value", 0))
-
-            price_hist = _get(
-                "/ohlcv-history",
-                {**base_params, "symbols": "SOLUSDT_PERP.A"},
-            )[0]["history"]
-            if price_hist:
-                trend["price_delta_24h"] = current_price - float(price_hist[0]["c"])
-        except Exception as e:
-            print(f"⚠️ Trend fetch error: {e}")
-
-        return {
-            "open_interest": open_interest,
-            "funding_rate": funding_rate,
-            "long_liquidations": long_liquidations,
-            "short_liquidations": short_liquidations,
-            "long_short_ratio": long_short_ratio,
-            "current_price": current_price,
-            **trend,
+        derivatives_data = {
+            "perp_symbol": "SOLUSDT_PERP.A",
+            "spot_symbol": "SOLUSDT.C",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        
+        # 1. Fetch Open Interest History (7 days)
+        try:
+            print("   📊 Fetching Open Interest history...")
+            oi_data = _get("/open-interest-history", {
+                **base_params,
+                "convert_to_usd": "true"
+            })
+            
+            oi_history = oi_data[0]["history"] if oi_data else []
+            oi_values = [float(item["c"]) for item in oi_history]
+            
+            derivatives_data["open_interest"] = {
+                "current": oi_values[-1] if oi_values else 0,
+                "history": oi_values,
+                "24h_change": oi_values[-1] - oi_values[-24] if len(oi_values) >= 24 else 0,
+                "7d_change": oi_values[-1] - oi_values[0] if len(oi_values) > 0 else 0,
+                "7d_avg": sum(oi_values) / len(oi_values) if oi_values else 0,
+                "7d_max": max(oi_values) if oi_values else 0,
+                "7d_min": min(oi_values) if oi_values else 0
+            }
+            print(f"   ✅ OI: {self._fmt_usd(derivatives_data['open_interest']['current'])} "
+                  f"(24h: {self._fmt_usd(derivatives_data['open_interest']['24h_change']):+})")
+        except Exception as e:
+            print(f"   ❌ Open Interest error: {e}")
+            derivatives_data["open_interest"] = {"current": 0, "history": [], "24h_change": 0, "7d_change": 0}
+        
+        # 2. Fetch Funding Rate History (7 days)
+        try:
+            print("   💸 Fetching Funding Rate history...")
+            fr_data = _get("/funding-rate-history", base_params)
+            
+            fr_history = fr_data[0]["history"] if fr_data else []
+            fr_values = [float(item["c"]) for item in fr_history]
+            
+            derivatives_data["funding_rate"] = {
+                "current": fr_values[-1] if fr_values else 0,
+                "history": fr_values,
+                "24h_change": fr_values[-1] - fr_values[-24] if len(fr_values) >= 24 else 0,
+                "7d_avg": sum(fr_values) / len(fr_values) if fr_values else 0,
+                "7d_max": max(fr_values) if fr_values else 0,
+                "7d_min": min(fr_values) if fr_values else 0,
+                "annualized_current": fr_values[-1] * 8760 if fr_values else 0  # hourly * hours per year
+            }
+            print(f"   ✅ Funding: {self._fmt_percentage(derivatives_data['funding_rate']['current'], 4)} "
+                  f"(Ann: {self._fmt_percentage(derivatives_data['funding_rate']['annualized_current'], 2)})")
+        except Exception as e:
+            print(f"   ❌ Funding Rate error: {e}")
+            derivatives_data["funding_rate"] = {"current": 0, "history": [], "24h_change": 0, "7d_avg": 0}
+        
+        # 3. Fetch Liquidation History (7 days)
+        try:
+            print("   🔥 Fetching Liquidation history...")
+            liq_data = _get("/liquidation-history", {
+                **base_params,
+                "convert_to_usd": "true"
+            })
+            
+            liq_history = liq_data[0]["history"] if liq_data else []
+            long_liq_values = [float(item.get("l", 0)) for item in liq_history]
+            short_liq_values = [float(item.get("s", 0)) for item in liq_history]
+            
+            derivatives_data["liquidations"] = {
+                "longs_24h": sum(long_liq_values[-24:]) if len(long_liq_values) >= 24 else sum(long_liq_values),
+                "shorts_24h": sum(short_liq_values[-24:]) if len(short_liq_values) >= 24 else sum(short_liq_values),
+                "longs_7d": sum(long_liq_values),
+                "shorts_7d": sum(short_liq_values),
+                "long_history": long_liq_values,
+                "short_history": short_liq_values,
+                "net_24h": sum(long_liq_values[-24:]) - sum(short_liq_values[-24:]) if len(long_liq_values) >= 24 else 0
+            }
+            print(f"   ✅ Liquidations 24h: {self._fmt_usd(derivatives_data['liquidations']['longs_24h'])}L / "
+                  f"{self._fmt_usd(derivatives_data['liquidations']['shorts_24h'])}S")
+        except Exception as e:
+            print(f"   ❌ Liquidations error: {e}")
+            derivatives_data["liquidations"] = {"longs_24h": 0, "shorts_24h": 0, "longs_7d": 0, "shorts_7d": 0}
+        
+        # 4. Fetch Long/Short Ratio History (7 days)
+        try:
+            print("   ⚖️ Fetching Long/Short Ratio history...")
+            ls_data = _get("/long-short-ratio-history", base_params)
+            
+            ls_history = ls_data[0]["history"] if ls_data else []
+            ls_ratio_values = [float(item.get("r", 1.0)) for item in ls_history]
+            
+            derivatives_data["long_short_ratio"] = {
+                "current": ls_ratio_values[-1] if ls_ratio_values else 1.0,
+                "history": ls_ratio_values,
+                "24h_change": ls_ratio_values[-1] - ls_ratio_values[-24] if len(ls_ratio_values) >= 24 else 0,
+                "7d_avg": sum(ls_ratio_values) / len(ls_ratio_values) if ls_ratio_values else 1.0,
+                "7d_max": max(ls_ratio_values) if ls_ratio_values else 1.0,
+                "7d_min": min(ls_ratio_values) if ls_ratio_values else 1.0
+            }
+            print(f"   ✅ L/S Ratio: {self._fmt_ratio(derivatives_data['long_short_ratio']['current'])} "
+                  f"(7d avg: {self._fmt_ratio(derivatives_data['long_short_ratio']['7d_avg'])})")
+        except Exception as e:
+            print(f"   ❌ Long/Short Ratio error: {e}")
+            derivatives_data["long_short_ratio"] = {"current": 1.0, "history": [], "24h_change": 0, "7d_avg": 1.0}
+        
+        # 5. Fetch Current Prices and Calculate Basis
+        try:
+            print("   💰 Fetching current prices and calculating basis...")
+            # Get perp price
+            perp_price_data = _get("/ohlcv-history", {
+                "symbols": "SOLUSDT_PERP.A",
+                "interval": "1min",
+                "from": to_ts - 300,  # last 5 minutes
+                "to": to_ts
+            })
+            perp_price = float(perp_price_data[0]["history"][-1]["c"]) if perp_price_data and perp_price_data[0]["history"] else 0
+            
+            # Get spot price
+            spot_price_data = _get("/ohlcv-history", {
+                "symbols": "SOLUSDT.C",
+                "interval": "1min", 
+                "from": to_ts - 300,
+                "to": to_ts
+            })
+            spot_price = float(spot_price_data[0]["history"][-1]["c"]) if spot_price_data and spot_price_data[0]["history"] else perp_price
+            
+            # Calculate basis
+            basis_points = ((perp_price - spot_price) / spot_price) if spot_price > 0 else 0
+            annualized_basis = basis_points * 365  # Rough annualization
+            
+            derivatives_data["prices"] = {
+                "perp_current": perp_price,
+                "spot_current": spot_price,
+                "basis_current": basis_points,
+                "basis_annualized": annualized_basis
+            }
+            
+            print(f"   ✅ Prices: Perp ${perp_price:.2f} | Spot ${spot_price:.2f} | "
+                  f"Basis: {self._fmt_percentage(basis_points, 3)} (Ann: {self._fmt_percentage(annualized_basis, 1)})")
+        except Exception as e:
+            print(f"   ❌ Prices/Basis error: {e}")
+            derivatives_data["prices"] = {"perp_current": 0, "spot_current": 0, "basis_current": 0, "basis_annualized": 0}
+        
+        # 6. Calculate Key Correlations
+        try:
+            print("   🔗 Calculating correlations...")
+            oi_values = derivatives_data["open_interest"]["history"]
+            fr_values = derivatives_data["funding_rate"]["history"]
+            ls_values = derivatives_data["long_short_ratio"]["history"]
+            
+            derivatives_data["correlations"] = {
+                "oi_funding": self._calculate_correlation(oi_values, fr_values),
+                "oi_ls_ratio": self._calculate_correlation(oi_values, ls_values),
+                "funding_ls_ratio": self._calculate_correlation(fr_values, ls_values)
+            }
+            print(f"   ✅ Correlations: OI-Funding: {derivatives_data['correlations']['oi_funding']:.3f}, "
+                  f"OI-L/S: {derivatives_data['correlations']['oi_ls_ratio']:.3f}")
+        except Exception as e:
+            print(f"   ❌ Correlations error: {e}")
+            derivatives_data["correlations"] = {"oi_funding": 0, "oi_ls_ratio": 0, "funding_ls_ratio": 0}
+        
+        print("   ✅ 7-day derivatives data fetch completed!")
+        return derivatives_data
     
-    def analyze_with_o3(self, coinalyze_data: Dict[str, Any]) -> str:
-        """Analyze data using o3 model"""
+    def analyze_with_o3(self, derivatives_data: Dict[str, Any]) -> str:
+        """Analyze derivatives data using o3 model for position holders"""
         if not self.openai_client:
             return "❌ OpenAI client not available"
         
-        print("🤖 Analyzing with o3 model...")
+        print("🤖 Analyzing derivatives patterns with o3...")
         
-        # Create focused prompt for hourly market insights
+        # Extract key metrics for analysis
+        oi = derivatives_data["open_interest"]
+        funding = derivatives_data["funding_rate"]
+        liq = derivatives_data["liquidations"]
+        ls_ratio = derivatives_data["long_short_ratio"]
+        prices = derivatives_data["prices"]
+        correlations = derivatives_data["correlations"]
+        
+        # Create comprehensive derivatives-focused prompt
         prompt = f"""
-You are a professional crypto analyst providing hourly market insights to a Solana position holder.
-Analyze this Coinalyze derivatives data and provide CONCISE, actionable insights for WhatsApp.
+You are an expert derivatives analyst providing directional advice to SOL position holders. 
+Analyze this 7-day SOL derivatives data and identify patterns, correlations, and risks.
 
-MARKET DATA:
-- Price: ${coinalyze_data['current_price']:.2f}
-- Open Interest (USD): ${coinalyze_data['open_interest']:,.0f}
-- Funding Rate: {coinalyze_data['funding_rate']*100:.4f}% (annualized)
-- Liquidations (1h, USD): ${coinalyze_data['long_liquidations']:,.0f} Longs / ${coinalyze_data['short_liquidations']:,.0f} Shorts
-- OI Δ24h: {coinalyze_data.get('open_interest_delta_24h', 'N/A'):,}
-- Price Δ24h: {coinalyze_data.get('price_delta_24h', 'N/A'):.2f}
-- Funding Δ24h: {coinalyze_data.get('funding_rate_delta_24h', 'N/A'):.6f}
-- Long/Short Ratio: {coinalyze_data['long_short_ratio']:.2f}
+🔍 DERIVATIVES METRICS (7-day data):
 
-Provide a concise hourly update (max 300 words) with:
-1. 🎯 SIGNAL: BULLISH/NEUTRAL/BEARISH (one word)
-2. 📊 Market sentiment (2-3 sentences)
-3. ⚠️ Key risks for position holders (2-3 bullet points)
-4. 💡 Actionable insight (1-2 sentences)
+📊 OPEN INTEREST:
+- Current: {self._fmt_usd(oi['current'])}
+- 24h Change: {self._fmt_usd(oi['24h_change']):+}
+- 7d Change: {self._fmt_usd(oi['7d_change']):+}
+- 7d Range: {self._fmt_usd(oi['7d_min'])} - {self._fmt_usd(oi['7d_max'])}
 
-Focus on what matters for someone holding SOL positions. Use emojis and clear formatting for WhatsApp.
+💸 FUNDING RATE:
+- Current: {self._fmt_percentage(funding['current'], 4)} ({self._fmt_percentage(funding['annualized_current'], 2)} ann.)
+- 24h Change: {funding['24h_change']*100:+.4f}%
+- 7d Average: {self._fmt_percentage(funding['7d_avg'], 4)}
+- 7d Range: {self._fmt_percentage(funding['7d_min'], 4)} - {self._fmt_percentage(funding['7d_max'], 4)}
+
+🔥 LIQUIDATIONS (24h):
+- Longs: {self._fmt_usd(liq['longs_24h'])}
+- Shorts: {self._fmt_usd(liq['shorts_24h'])} 
+- Net: {self._fmt_usd(liq['net_24h']):+}
+- 7d Total: {self._fmt_usd(liq['longs_7d'] + liq['shorts_7d'])}
+
+⚖️ LONG/SHORT RATIO:
+- Current: {self._fmt_ratio(ls_ratio['current'])}
+- 24h Change: {ls_ratio['24h_change']:+.2f}
+- 7d Average: {self._fmt_ratio(ls_ratio['7d_avg'])}
+- 7d Range: {self._fmt_ratio(ls_ratio['7d_min'])} - {self._fmt_ratio(ls_ratio['7d_max'])}
+
+💰 BASIS & PRICES:
+- Perp: ${prices['perp_current']:.2f}
+- Spot: ${prices['spot_current']:.2f}  
+- Basis: {self._fmt_percentage(prices['basis_current'], 3)} ({self._fmt_percentage(prices['basis_annualized'], 1)} ann.)
+
+🔗 CORRELATIONS (7d):
+- OI ↔ Funding: {correlations['oi_funding']:.3f}
+- OI ↔ L/S Ratio: {correlations['oi_ls_ratio']:.3f}
+- Funding ↔ L/S: {correlations['funding_ls_ratio']:.3f}
+
+📋 ANALYSIS REQUIREMENTS:
+Provide a focused derivatives analysis (max 350 words) with:
+
+1. 🎯 POSITION BIAS: LONG/SHORT/NEUTRAL (choose one based on derivatives patterns)
+
+2. 📊 DERIVATIVES INSIGHTS (3-4 key observations):
+   - Open Interest trends and what they signal
+   - Funding rate patterns (mean reversion, extremes, sustainability)
+   - Liquidation patterns and cascade risks
+   - Long/Short ratio implications
+   - Basis analysis (contango/backwardation implications)
+
+3. ⚠️ RISK ALERTS (2-3 specific warnings):
+   - Funding squeeze risks
+   - Liquidation cascade zones  
+   - OI divergence warnings
+   - Basis risks for position holders
+
+4. 💡 POSITION ADVICE (2-3 actionable points):
+   - Entry/exit timing based on derivatives
+   - Risk management for current positions
+   - What to watch for next moves
+
+Focus on derivatives-specific signals that matter for position management. Use clear, direct language.
 """
         
         try:
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",  # Using o3 equivalent
+                model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a professional crypto analyst. Provide concise, actionable insights."},
+                    {"role": "system", "content": "You are an expert derivatives analyst specializing in crypto futures markets. Focus on actionable insights for position holders based on derivatives data patterns."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=800,
-                temperature=0.3
+                max_tokens=1000,
+                temperature=0.2  # Lower temperature for more consistent analysis
             )
             
             analysis = response.choices[0].message.content
-            print("   ✅ o3 analysis completed")
+            print("   ✅ Derivatives analysis completed")
             return analysis
             
         except Exception as e:
             print(f"   ❌ o3 analysis error: {e}")
             return f"❌ Analysis failed: {str(e)}"
     
-    def create_whatsapp_message(self, coinalyze_data: Dict[str, Any], o3_analysis: str) -> str:
-        """Create formatted WhatsApp message"""
+    def create_whatsapp_message(self, derivatives_data: Dict[str, Any], o3_analysis: str) -> str:
+        """Create focused WhatsApp message for position holders"""
         timestamp = datetime.now(timezone.utc).strftime("%H:%M UTC")
         
+        # Extract key metrics
+        oi = derivatives_data["open_interest"]
+        funding = derivatives_data["funding_rate"]
+        liq = derivatives_data["liquidations"]
+        ls_ratio = derivatives_data["long_short_ratio"]
+        prices = derivatives_data["prices"]
+        
         message = f"""
-🔄 SOL HOURLY UPDATE
+🎯 SOL DERIVATIVES ALERT
 ⏰ {timestamp}
 
-📊 DATA:
-💰 Price: ${coinalyze_data['current_price']:.2f}
-📈 OI: {self._fmt_usd(coinalyze_data['open_interest'])}
-💸 Funding: {coinalyze_data['funding_rate']*100:.4f}%
-⚖️ L/S: {coinalyze_data['long_short_ratio']:.2f}
-🔥 Liq: {self._fmt_usd(coinalyze_data['long_liquidations'])}L / {self._fmt_usd(coinalyze_data['short_liquidations'])}S
-📈 OI Δ24h: {self._fmt_usd(coinalyze_data.get('open_interest_delta_24h',0))}
-💰 Price Δ24h: {coinalyze_data.get('price_delta_24h',0):+.2f}
-💸 Funding Δ24h: {coinalyze_data.get('funding_rate_delta_24h',0):+.6f}
+📊 KEY METRICS:
+💰 Perp: ${prices['perp_current']:.2f} | Spot: ${prices['spot_current']:.2f}
+📈 OI: {self._fmt_usd(oi['current'])} ({self._fmt_usd(oi['24h_change']):+} 24h)
+💸 Funding: {self._fmt_percentage(funding['current'], 4)} ({self._fmt_percentage(funding['annualized_current'], 2)} ann)
+⚖️ L/S: {self._fmt_ratio(ls_ratio['current'])} (Δ{ls_ratio['24h_change']:+.2f})
+🔥 Liq 24h: {self._fmt_usd(liq['longs_24h'])}L / {self._fmt_usd(liq['shorts_24h'])}S
+🎢 Basis: {self._fmt_percentage(prices['basis_current'], 3)} ({self._fmt_percentage(prices['basis_annualized'], 1)} ann)
 
 {o3_analysis}
 
----
-🤖 o3 + Coinalyze
+📈 Data: Coinalyze | Analysis: o3
 """
         
         return message.strip()
@@ -345,59 +467,74 @@ Focus on what matters for someone holding SOL positions. Use emojis and clear fo
             return False
     
     def run_analysis(self, send_whatsapp: bool = True) -> Dict[str, Any]:
-        """Run complete analysis workflow"""
-        print("🚀 Starting Enhanced Solana Analysis...")
+        """Run complete derivatives analysis workflow"""
+        print("🚀 Starting SOL Derivatives Analysis...")
         
-        # Fetch Coinalyze data
-        coinalyze_data = self.fetch_coinalyze_data()
+        # Fetch 7-day derivatives data
+        derivatives_data = self.fetch_coinalyze_data()
         
-        # Analyze with o3
-        o3_analysis = self.analyze_with_o3(coinalyze_data)
+        # Analyze with o3 for derivatives patterns
+        o3_analysis = self.analyze_with_o3(derivatives_data)
         
-        # Create WhatsApp message
-        whatsapp_message = self.create_whatsapp_message(coinalyze_data, o3_analysis)
+        # Create focused WhatsApp message
+        whatsapp_message = self.create_whatsapp_message(derivatives_data, o3_analysis)
         
-        # Print analysis
-        print("\n" + "="*50)
-        print("ANALYSIS RESULTS:")
-        print("="*50)
+        # Print analysis results
+        print("\n" + "="*60)
+        print("🎯 SOL DERIVATIVES ANALYSIS RESULTS")
+        print("="*60)
         print(whatsapp_message)
-        print("="*50)
+        print("="*60)
         
         # Send to WhatsApp if requested
         whatsapp_sent = False
         if send_whatsapp:
             whatsapp_sent = self.send_to_whatsapp(whatsapp_message)
         
-        # Save results
+        # Save comprehensive results
         results = {
-            "coinalyze_data": coinalyze_data,
+            "derivatives_data": derivatives_data,
             "o3_analysis": o3_analysis,
             "whatsapp_message": whatsapp_message,
             "whatsapp_sent": whatsapp_sent,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "perp_price": derivatives_data["prices"]["perp_current"],
+                "spot_price": derivatives_data["prices"]["spot_current"],
+                "oi_current": derivatives_data["open_interest"]["current"],
+                "oi_24h_change": derivatives_data["open_interest"]["24h_change"],
+                "funding_current": derivatives_data["funding_rate"]["current"],
+                "funding_annualized": derivatives_data["funding_rate"]["annualized_current"],
+                "ls_ratio": derivatives_data["long_short_ratio"]["current"],
+                "basis_current": derivatives_data["prices"]["basis_current"],
+                "liquidations_net_24h": derivatives_data["liquidations"]["net_24h"]
+            }
         }
         
         # Save to file
         with open("enhanced_analysis.json", "w") as f:
             json.dump(results, f, indent=2)
         
-        print(f"💾 Results saved to enhanced_analysis.json")
+        print(f"💾 Comprehensive results saved to enhanced_analysis.json")
         return results
 
 def main():
-    """Main entry point"""
-    parser = argparse.ArgumentParser(description="Enhanced Solana Analysis Workflow")
+    """Main entry point for SOL derivatives analysis"""
+    parser = argparse.ArgumentParser(description="SOL Derivatives Analysis Agent - 7-day pattern analysis with o3 insights")
     parser.add_argument("--no-whatsapp", action="store_true", help="Skip WhatsApp sending")
     args = parser.parse_args()
     
     try:
         workflow = EnhancedSolanaWorkflow()
         results = workflow.run_analysis(send_whatsapp=not args.no_whatsapp)
-        print("✅ Analysis completed successfully!")
+        print("✅ SOL derivatives analysis completed successfully!")
+        print(f"📊 Analyzed {len(results['derivatives_data']['open_interest']['history'])} hours of data")
+        print(f"🎯 Current signal bias available in analysis")
         
     except Exception as e:
-        print(f"❌ Workflow failed: {e}")
+        print(f"❌ Derivatives analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
     
     return 0
