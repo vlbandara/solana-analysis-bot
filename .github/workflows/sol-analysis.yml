@@ -89,13 +89,13 @@ jobs:
         AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
       run: |
         source .venv/bin/activate
-        python -c "
-import os
-from whatsapp_sender import WhatsAppSender
-if os.getenv('AUTO_SEND_TO_WHATSAPP', '').startswith('+'):
-    sender = WhatsAppSender()
-    sender.send_message('🚨 SOL Analysis Failed\n\nGitHub Actions workflow encountered an error. Check the Actions tab for details.\n\n⏰ $(date)')
-    print('✅ Failure notification sent')
-else:
-    print('📱 WhatsApp notifications disabled')
-"
+        python -c '
+        import os
+        from whatsapp_sender import WhatsAppSender
+        if os.getenv("AUTO_SEND_TO_WHATSAPP", "").startswith("+"):
+            sender = WhatsAppSender()
+            sender.send_message("🚨 SOL Analysis Failed\n\nGitHub Actions workflow encountered an error. Check the Actions tab for details.")
+            print("✅ Failure notification sent")
+        else:
+            print("📱 WhatsApp notifications disabled")
+        '
