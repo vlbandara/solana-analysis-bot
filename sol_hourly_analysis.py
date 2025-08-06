@@ -246,11 +246,12 @@ DETECT: Correlations signaling sudden moves before they happen
 - OI+liquidations = leverage stress points
 - Price vs OI divergences = accumulation/distribution
 
-Format (400 chars max):
-🚨 SIGNAL: [PUMP RISK/DROP RISK/SQUEEZE SETUP/NO CLEAR SIGNAL]
-📊 CORRELATION: [Key relationships driving signal]
-⚠️ POSITIONED: [Warning for longs/shorts with levels]
-💡 PREPARE: [How to hedge/position for move]
+Format (max 480 chars):
+🚨 SIGNAL: [PUMP RISK/DROP RISK/SQUEEZE/NO CLEAR SIGNAL]
+📊 CORRELATION: [Key metric relationships driving this view]
+⚠️ LONGS: [Risk or opportunity for existing long holders]
+⚠️ SHORTS: [Risk or opportunity for existing shorts]
+⏳ SIDELINED: [What watchers should monitor before entry]
 """
         
         try:
@@ -273,7 +274,7 @@ Format (400 chars max):
                 print(f"⚠️ Empty analysis - finish_reason: {response.choices[0].finish_reason}")
                 print(f"⚠️ Usage: {response.usage}")
                 print("❌ o3 model failed to generate analysis")
-                return "🚨 SIGNAL: NO CLEAR SIGNAL\n📊 CORRELATION: Analysis unavailable due to technical issues\n⚠️ POSITIONED: Monitor market manually\n💡 PREPARE: Use backup analysis tools"
+                return "🚨 SIGNAL: NO CLEAR SIGNAL\n📊 CORRELATION: Analysis unavailable (technical issue)\n⚠️ LONGS: Monitor manually\n⚠️ SHORTS: Monitor manually\n⏳ SIDELINED: Await clear metrics"
             
             return analysis
             
