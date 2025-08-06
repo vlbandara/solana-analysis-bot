@@ -44,7 +44,7 @@ jobs:
         WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
         
         # Control WhatsApp sending
-        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.send_whatsapp || 'false' }}
+        AUTO_SEND_TO_WHATSAPP: ${{ 'true' }}
         
       run: |
         echo "🚀 Starting SOL 24h Evolution Analysis..."
