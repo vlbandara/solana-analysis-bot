@@ -236,32 +236,21 @@ CHANGES SINCE LAST ANALYSIS:
 """
         
         prompt = f"""
-Analyze comprehensive SOL derivatives data and provide trading insights with reasoning:
+SOL Early Warning Analysis for Positioned Traders:
 
-COMPREHENSIVE MARKET DATA:
-• Price: ${current['price']:.2f} ({current['price_24h_change']:+.1f}% 24h)
-• Open Interest: ${current['oi_usd']/1e6:.1f}M ({current['oi_24h_change']:+.1f}% 24h)
-• Funding Rate: {current['funding_pct']:.3f}% (predicted: {current['predicted_funding_pct']:.3f}%)
-• Long/Short Ratio: {current['ls_ratio']:.2f} (24h avg: {current['ls_24h_avg']:.2f}, change: {current['ls_24h_change']:+.1f}%)
-• Liquidations 24h: Long ${current['long_liq_24h']/1e6:.1f}M | Short ${current['short_liq_24h']/1e6:.1f}M
-• Liquidations 6h: Long ${current['long_liq_6h']/1e6:.1f}M | Short ${current['short_liq_6h']/1e6:.1f}M
+DATA: ${current['price']:.2f} ({current['price_24h_change']:+.1f}%), OI ${current['oi_usd']/1e6:.1f}M ({current['oi_24h_change']:+.1f}%), Funding {current['funding_pct']:.3f}%→{current['predicted_funding_pct']:.3f}%, L/S {current['ls_ratio']:.2f} (+{current['ls_24h_change']:+.1f}%), Liq 24h: ${current['long_liq_24h']/1e6:.1f}M L/${current['short_liq_24h']/1e6:.1f}M S
 {changes}
 
-CRITICAL ANALYSIS REQUIREMENTS:
-- Identify key patterns and correlations between metrics
-- Explain the logic behind funding vs L/S positioning dynamics
-- Note any divergences between price action and positioning
-- Consider liquidation patterns and basis effects
-- Provide actionable insights with reasoning
+DETECT: Correlations signaling sudden moves before they happen
+- Funding vs positioning divergences = squeeze setups
+- OI+liquidations = leverage stress points
+- Price vs OI divergences = accumulation/distribution
 
-Provide analysis in this exact format:
-
-🎯 BIAS: [BULLISH/BEARISH/NEUTRAL/UNCLEAR]
-📊 KEY INSIGHT: [Explain the main pattern/correlation driving this view. Be specific about the logic connecting funding, L/S, OI changes, liquidations]
-⚠️ TOP RISK: [Key risk scenario with specific price levels based on positioning data]
-💡 ACTION: [Specific trading recommendation with entry/exit levels and reasoning]
-
-Keep under 480 characters total for WhatsApp compatibility.
+Format (400 chars max):
+🚨 SIGNAL: [PUMP RISK/DROP RISK/SQUEEZE SETUP/NO CLEAR SIGNAL]
+📊 CORRELATION: [Key relationships driving signal]
+⚠️ POSITIONED: [Warning for longs/shorts with levels]
+💡 PREPARE: [How to hedge/position for move]
 """
         
         try:
@@ -271,30 +260,20 @@ Keep under 480 characters total for WhatsApp compatibility.
             response = client.chat.completions.create(
                 model="o3",
                 messages=[
-                    {"role": "system", "content": "You are an elite derivatives trading analyst. Provide concise but insightful analysis with clear reasoning showing how you connect different market metrics."},
+                    {"role": "system", "content": "You are an elite derivatives trading analyst specializing in early warning signals for positioned traders."},
                     {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=1000
+                ]
             )
             
             analysis = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
             print(f"✅ o3 analysis received ({len(analysis)} chars)")
             
-            # Debug empty response
+            # Debug empty response and fail cleanly
             if not analysis:
                 print(f"⚠️ Empty analysis - finish_reason: {response.choices[0].finish_reason}")
                 print(f"⚠️ Usage: {response.usage}")
-                # Fallback with simpler prompt
-                print("🔄 Trying fallback prompt...")
-                simple_response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "user", "content": f"Analyze SOL: Price ${current['price']:.2f} ({current['price_24h_change']:+.1f}%), OI ${current['oi_usd']/1e6:.1f}M ({current['oi_24h_change']:+.1f}%), Funding {current['funding_pct']:.3f}%, L/S {current['ls_ratio']:.2f}. Give BIAS, KEY INSIGHT, RISK, ACTION in 400 chars."}
-                    ],
-                    max_tokens=500
-                )
-                analysis = simple_response.choices[0].message.content.strip()
-                print(f"✅ Fallback analysis: ({len(analysis)} chars)")
+                print("❌ o3 model failed to generate analysis")
+                return "🚨 SIGNAL: NO CLEAR SIGNAL\n📊 CORRELATION: Analysis unavailable due to technical issues\n⚠️ POSITIONED: Monitor market manually\n💡 PREPARE: Use backup analysis tools"
             
             return analysis
             
