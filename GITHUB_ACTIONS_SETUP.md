@@ -22,7 +22,7 @@ To enable the automated workflow, you need to add the following secrets to your 
 | `TWILIO_ACCOUNT_SID` | Twilio Account SID for WhatsApp | `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Twilio Auth Token | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp sender number | `+1234567890` |
-| `AUTO_SEND_TO_WHATSAPP` | Your WhatsApp number to receive alerts | `+1234567890` |
+| `AUTO_SEND_TO_WHATSAPP` | Your WhatsApp number to receive alerts (must start with +) | `+1234567890` |
 
 ### 3. Workflow Schedule
 The workflow is configured to run:
@@ -61,6 +61,21 @@ If the workflow fails:
 
 ## Local Development
 For local development, copy `.env.example` to `.env` and add your actual API keys.
+
+## Troubleshooting WhatsApp Issues
+
+If you see WhatsApp errors in the GitHub Actions logs:
+
+### Common Issues:
+1. **"To Number: ❌ Missing"** - Your `AUTO_SEND_TO_WHATSAPP` secret is not set or doesn't start with `+`
+2. **"Twilio client not available"** - Check that all Twilio secrets are properly set
+3. **"Missing Twilio credentials"** - One or more of your Twilio secrets is empty
+
+### Debug Steps:
+1. **Check Secrets**: Go to Settings → Secrets → Actions and verify all 6 secrets are set
+2. **Phone Number Format**: Ensure `AUTO_SEND_TO_WHATSAPP` starts with `+` (e.g., `+1234567890`)
+3. **Twilio Setup**: Verify your Twilio WhatsApp sandbox is configured
+4. **Manual Test**: Run workflow manually with WhatsApp disabled to test analysis only
 
 ## Security Notes
 - Never commit actual API keys to the repository

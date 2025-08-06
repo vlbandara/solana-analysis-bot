@@ -52,7 +52,8 @@ jobs:
         TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
         TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
         TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
-        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.enable_whatsapp || secrets.AUTO_SEND_TO_WHATSAPP || 'true' }}
+        WHATSAPP_TO_NUMBER: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
+        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.enable_whatsapp || 'true' }}
         PYTHONPATH: ${{ github.workspace }}
         PYTHONUNBUFFERED: '1'
       run: |
@@ -86,16 +87,16 @@ jobs:
         TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
         TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
         TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
-        AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
+        WHATSAPP_TO_NUMBER: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
       run: |
         source .venv/bin/activate
         python -c '
         import os
         from whatsapp_sender import WhatsAppSender
-        if os.getenv("AUTO_SEND_TO_WHATSAPP", "").startswith("+"):
+        if os.getenv("WHATSAPP_TO_NUMBER", "").startswith("+"):
             sender = WhatsAppSender()
             sender.send_message("🚨 SOL Analysis Failed\n\nGitHub Actions workflow encountered an error. Check the Actions tab for details.")
             print("✅ Failure notification sent")
         else:
-            print("📱 WhatsApp notifications disabled")
+            print("📱 WhatsApp notifications disabled - no recipient number")
         '
