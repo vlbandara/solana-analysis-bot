@@ -17,7 +17,11 @@ import json
 import requests
 from datetime import datetime, timezone
 from openai import OpenAI
+from dotenv import load_dotenv
 from whatsapp_sender import WhatsAppSender
+
+# Load environment variables from .env file
+load_dotenv()
 
 class HourlySolAnalysis:
     def __init__(self):
@@ -33,8 +37,7 @@ class HourlySolAnalysis:
         self.session.headers.update({'api_key': self.coinalyze_key})
         self.perp_symbol = "SOLUSDT_PERP.A"
         
-        # State file to track last analysis
-        self.state_file = 'sol_analysis_state.json'
+        # Removed state file - always run analysis
     
     def _api_get(self, endpoint, params=None):
         """Safe API call with debug info"""
@@ -100,7 +103,10 @@ class HourlySolAnalysis:
                     # Try different possible field names for OI value
                     oi_24h_ago = 0
                     first_record = history[0]
-                    if 'v' in first_record:
+                    # Use 'c' (close) field for OI value - it's OHLC format
+                    if 'c' in first_record:
+                        oi_24h_ago = float(first_record['c'])
+                    elif 'v' in first_record:
                         oi_24h_ago = float(first_record['v'])
                     elif 'value' in first_record:
                         oi_24h_ago = float(first_record['value'])
@@ -177,13 +183,7 @@ class HourlySolAnalysis:
         except Exception as e:
             print(f"⚠️ Liquidation data error: {e}")
         
-        # 6. Basis (perp vs spot spread)
-        basis_pct = 0
-        try:
-            basis_data = self._api_get("/basis", {"symbols": self.perp_symbol})
-            basis_pct = float(basis_data[0]['value']) * 100 if basis_data else 0
-        except Exception as e:
-            print(f"⚠️ Basis data error: {e}")
+        # Removed basis calculation - not needed
         
         snapshot = {
             'timestamp': now,
@@ -199,8 +199,7 @@ class HourlySolAnalysis:
             'long_liq_24h': long_liq_24h,
             'short_liq_24h': short_liq_24h,
             'long_liq_6h': long_liq_6h,
-            'short_liq_6h': short_liq_6h,
-            'basis_pct': basis_pct
+            'short_liq_6h': short_liq_6h
         }
         
         print(f"   💰 Price: ${current_price:.2f} ({price_24h_change:+.1f}% 24h)")
@@ -208,68 +207,13 @@ class HourlySolAnalysis:
         print(f"   💸 Funding: {funding_rate:.3f}% (pred: {predicted_funding_rate:.3f}%)")
         print(f"   ⚖️ L/S: {ls_ratio:.2f} (24h avg: {ls_24h_avg:.2f}, {ls_24h_change:+.1f}%)")
         print(f"   🔥 Liq 24h: ${long_liq_24h/1e6:.1f}M L / ${short_liq_24h/1e6:.1f}M S")
-        print(f"   📈 Basis: {basis_pct:.3f}%")
+        print(f"   🔥 Liq 6h: ${long_liq_6h/1e6:.1f}M L / ${short_liq_6h/1e6:.1f}M S")
         
         return snapshot
     
-    def load_last_state(self):
-        """Load last analysis state"""
-        try:
-            with open(self.state_file, 'r') as f:
-                return json.load(f)
-        except:
-            return None
-    
-    def save_state(self, data):
-        """Save current state"""
-        with open(self.state_file, 'w') as f:
-            json.dump(data, f, indent=2)
-    
-    def should_send_alert(self, current, last):
-        """Determine if changes are significant enough to send alert"""
-        if not last:
-            return True, "First analysis"
-        
-        # Check for significant changes
-        price_change = abs(current['price'] - last['price']) / last['price'] * 100
-        oi_change = abs(current['oi_usd'] - last['oi_usd']) / last['oi_usd'] * 100
-        funding_change = abs(current['funding_pct'] - last['funding_pct'])
-        ls_change = abs(current['ls_ratio'] - last['ls_ratio']) / last['ls_ratio'] * 100
-        
-        # Check 24h price momentum shift
-        price_momentum_change = 0
-        if 'price_24h_change' in last:
-            price_momentum_change = abs(current['price_24h_change'] - last['price_24h_change'])
-        
-        # Thresholds for significant changes
-        if price_change > 2.0:
-            return True, f"Price moved {price_change:.1f}%"
-        if oi_change > 5.0:
-            return True, f"OI changed {oi_change:.1f}%"
-        if funding_change > 0.05:
-            return True, f"Funding shifted {funding_change:.3f}%"
-        if ls_change > 10.0:
-            return True, f"L/S changed {ls_change:.1f}%"
-        
-        # New thresholds for comprehensive data
-        if price_momentum_change > 3.0:
-            return True, f"24h momentum shift {price_momentum_change:.1f}%"
-        if abs(current['oi_24h_change']) > 8.0:
-            return True, f"OI 24h change {abs(current['oi_24h_change']):.1f}%"
-        if abs(current['ls_24h_change']) > 15.0:
-            return True, f"L/S 24h change {abs(current['ls_24h_change']):.1f}%"
-            
-        # Check liquidation spikes
-        total_liq_6h = current['long_liq_6h'] + current['short_liq_6h']
-        if total_liq_6h > 5e6:  # $5M+ in 6h liquidations
-            return True, f"High liquidations ${total_liq_6h/1e6:.1f}M in 6h"
-            
-        # Check time since last alert (max 4 hours)
-        hours_since = (current['timestamp'] - last['timestamp']) / 3600
-        if hours_since > 4:
-            return True, f"4+ hours since last update"
-        
-        return False, "No significant changes"
+    def should_send_alert(self, current, last=None):
+        """Always send alert - removed state checking"""
+        return True, "Always run hourly analysis"
     
     def analyze_with_reasoning(self, current, last=None):
         """Generate comprehensive analysis with reasoning"""
@@ -300,8 +244,7 @@ COMPREHENSIVE MARKET DATA:
 • Funding Rate: {current['funding_pct']:.3f}% (predicted: {current['predicted_funding_pct']:.3f}%)
 • Long/Short Ratio: {current['ls_ratio']:.2f} (24h avg: {current['ls_24h_avg']:.2f}, change: {current['ls_24h_change']:+.1f}%)
 • Liquidations 24h: Long ${current['long_liq_24h']/1e6:.1f}M | Short ${current['short_liq_24h']/1e6:.1f}M
-• Liquidations 6h: Long ${current['long_liq_6h']/1e6:.1f}M | Short ${current['short_liq_6h']/1e6:.1f}M  
-• Basis (perp-spot): {current['basis_pct']:.3f}%
+• Liquidations 6h: Long ${current['long_liq_6h']/1e6:.1f}M | Short ${current['short_liq_6h']/1e6:.1f}M
 {changes}
 
 CRITICAL ANALYSIS REQUIREMENTS:
@@ -323,17 +266,36 @@ Keep under 480 characters total for WhatsApp compatibility.
         
         try:
             print("🧠 Calling o3 model for analysis...")
+            print(f"🔍 Prompt length: {len(prompt)} chars")
+            
             response = client.chat.completions.create(
                 model="o3",
                 messages=[
                     {"role": "system", "content": "You are an elite derivatives trading analyst. Provide concise but insightful analysis with clear reasoning showing how you connect different market metrics."},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=800
+                max_completion_tokens=1000
             )
             
-            analysis = response.choices[0].message.content.strip()
+            analysis = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
             print(f"✅ o3 analysis received ({len(analysis)} chars)")
+            
+            # Debug empty response
+            if not analysis:
+                print(f"⚠️ Empty analysis - finish_reason: {response.choices[0].finish_reason}")
+                print(f"⚠️ Usage: {response.usage}")
+                # Fallback with simpler prompt
+                print("🔄 Trying fallback prompt...")
+                simple_response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "user", "content": f"Analyze SOL: Price ${current['price']:.2f} ({current['price_24h_change']:+.1f}%), OI ${current['oi_usd']/1e6:.1f}M ({current['oi_24h_change']:+.1f}%), Funding {current['funding_pct']:.3f}%, L/S {current['ls_ratio']:.2f}. Give BIAS, KEY INSIGHT, RISK, ACTION in 400 chars."}
+                    ],
+                    max_tokens=500
+                )
+                analysis = simple_response.choices[0].message.content.strip()
+                print(f"✅ Fallback analysis: ({len(analysis)} chars)")
+            
             return analysis
             
         except Exception as e:
@@ -358,23 +320,15 @@ Keep under 480 characters total for WhatsApp compatibility.
             # 1. Get current snapshot
             current = self.get_current_snapshot()
             
-            # 2. Load last state
-            last_state = self.load_last_state()
+            # 2. Always run analysis (no state checking)
+            should_send, reason = self.should_send_alert(current)
+            print(f"📊 Running analysis: {reason}")
             
-            # 3. Check if we should send alert
-            should_send, reason = self.should_send_alert(current, last_state)
-            
-            print(f"📊 Should send alert: {should_send} - {reason}")
-            
-            if not should_send:
-                print("✅ No significant changes, skipping alert")
-                return
-            
-            # 4. Analyze with reasoning
+            # 3. Analyze with reasoning
             print("🧠 Generating analysis...")
-            analysis = self.analyze_with_reasoning(current, last_state)
+            analysis = self.analyze_with_reasoning(current)
             
-            # 5. Format for WhatsApp
+            # 4. Format for WhatsApp
             whatsapp_msg = self.format_whatsapp(analysis, current)
             
             print(f"📱 WhatsApp message ({len(whatsapp_msg)} chars):")
@@ -382,23 +336,16 @@ Keep under 480 characters total for WhatsApp compatibility.
             print(whatsapp_msg)
             print("-" * 40)
             
-            # 6. Send to WhatsApp
+            # 5. Send to WhatsApp
             if os.getenv('AUTO_SEND_TO_WHATSAPP', 'true').lower() == 'true':
                 sender = WhatsAppSender()
                 success = sender.send_message(whatsapp_msg)
                 if success:
                     print("✅ WhatsApp sent successfully")
-                    # 7. Save state only after successful send
-                    current['last_analysis'] = analysis
-                    current['last_whatsapp'] = whatsapp_msg
-                    self.save_state(current)
                 else:
                     print("❌ WhatsApp send failed")
             else:
                 print("📱 AUTO_SEND_TO_WHATSAPP disabled")
-                # Save state anyway for testing
-                current['last_analysis'] = analysis
-                self.save_state(current)
             
         except Exception as e:
             print(f"❌ Analysis failed: {e}")

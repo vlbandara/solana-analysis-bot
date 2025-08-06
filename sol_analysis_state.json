@@ -1,0 +1,18 @@
+{
+  "timestamp": 1754448323,
+  "price": 162.88,
+  "price_24h_change": -2.9551954242135414,
+  "oi_usd": 1504370238.2709,
+  "oi_24h_change": 0,
+  "funding_pct": -0.6839999999999999,
+  "predicted_funding_pct": -0.7509,
+  "ls_ratio": 3.2699,
+  "ls_24h_avg": 3.177516666666667,
+  "ls_24h_change": 8.067287989953071,
+  "long_liq_24h": 3313245.5557999997,
+  "short_liq_24h": 812541.0409,
+  "long_liq_6h": 585366.1714999999,
+  "short_liq_6h": 64706.9627,
+  "basis_pct": 0,
+  "last_analysis": ""
+}

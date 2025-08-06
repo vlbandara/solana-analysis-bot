@@ -30,21 +30,31 @@ The workflow is configured to run:
 - **Manually**: You can trigger it manually from the Actions tab
 
 ### 4. Workflow Features
-- ✅ Runs on Ubuntu latest
-- ✅ Uses Python 3.11
-- ✅ Installs dependencies with `uv`
-- ✅ Executes SOL analysis with environment secrets
-- ✅ Archives results as artifacts
-- ✅ Runs for 7 days retention
+- ✅ **Robust execution**: 10-minute timeout with proper error handling
+- ✅ **Enhanced dependencies**: Automatic installation of all required packages
+- ✅ **WhatsApp control**: Enable/disable WhatsApp sending via manual trigger
+- ✅ **Failure notifications**: Automatic WhatsApp alerts if workflow fails
+- ✅ **Artifact archiving**: Analysis results saved for 3 days
+- ✅ **Dependency verification**: Pre-run checks ensure all packages installed
+- ✅ **Environment isolation**: Clean virtual environment for each run
 
-### 5. Manual Trigger
-You can manually trigger the workflow:
+### 5. Manual Trigger Options
+You can manually trigger the workflow with options:
 1. Go to **Actions** tab in your repository
 2. Click on **SOL Hourly Analysis** workflow
 3. Click **Run workflow** button
-4. Click **Run workflow** to confirm
+4. **Choose WhatsApp setting**:
+   - `true` - Send WhatsApp messages (default)
+   - `false` - Run analysis only, no WhatsApp
+5. Click **Run workflow** to confirm
 
-### 6. Monitoring
+### 6. Automatic Failure Handling
+If the workflow fails:
+- ✅ **Automatic WhatsApp notification** sent to your number
+- ✅ **Error logs** archived as artifacts
+- ✅ **Detailed GitHub Actions logs** for debugging
+
+### 7. Monitoring
 - Check the **Actions** tab to see workflow runs
 - Download artifacts to see analysis results
 - View logs for debugging if needed

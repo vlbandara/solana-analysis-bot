@@ -6,27 +6,44 @@ on:
     - cron: '5 * * * *'
   workflow_dispatch:
     # Allow manual trigger
+    inputs:
+      enable_whatsapp:
+        description: 'Enable WhatsApp sending'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
 
 jobs:
   sol-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
         
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v4
       
-    - name: Install dependencies
+    - name: Create virtual environment and install dependencies
       run: |
-        uv sync
-        uv add twilio
+        uv venv
+        source .venv/bin/activate
+        uv pip install -r requirements.txt
+        uv pip install twilio python-dotenv
+        
+    - name: Verify dependencies
+      run: |
+        source .venv/bin/activate
+        python -c "import openai, requests, twilio; print('✅ All dependencies installed')"
         
     - name: Run SOL Analysis
       env:
@@ -35,16 +52,50 @@ jobs:
         TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
         TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
         TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
-        AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
+        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.enable_whatsapp || secrets.AUTO_SEND_TO_WHATSAPP || 'true' }}
+        PYTHONPATH: ${{ github.workspace }}
+        PYTHONUNBUFFERED: '1'
       run: |
-        uv run python sol_hourly_analysis.py
+        source .venv/bin/activate
+        echo "🚀 Starting SOL Analysis with WhatsApp: $AUTO_SEND_TO_WHATSAPP"
+        python sol_hourly_analysis.py
+        
+    - name: Check for analysis output
+      if: always()
+      run: |
+        echo "📊 Workflow completed at $(date)"
+        if [ -f "sol_analysis_state.json" ]; then
+          echo "📄 State file created"
+          cat sol_analysis_state.json
+        fi
         
     - name: Archive analysis results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: sol-analysis-results-${{ github.run_number }}
+        name: sol-analysis-${{ github.run_number }}-${{ github.run_attempt }}
         path: |
           *.json
           *.log
-        retention-days: 7
+          *.txt
+        retention-days: 3
+        
+    - name: Notify on failure
+      if: failure()
+      env:
+        TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+        TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+        TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
+        AUTO_SEND_TO_WHATSAPP: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
+      run: |
+        source .venv/bin/activate
+        python -c "
+import os
+from whatsapp_sender import WhatsAppSender
+if os.getenv('AUTO_SEND_TO_WHATSAPP', '').startswith('+'):
+    sender = WhatsAppSender()
+    sender.send_message('🚨 SOL Analysis Failed\n\nGitHub Actions workflow encountered an error. Check the Actions tab for details.\n\n⏰ $(date)')
+    print('✅ Failure notification sent')
+else:
+    print('📱 WhatsApp notifications disabled')
+"
