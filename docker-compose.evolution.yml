@@ -1,0 +1,60 @@
+services:
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution-api
+    ports:
+      - "8080:8080"
+    environment:
+      # Server Configuration
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      - SERVER_URL=http://localhost:8080
+      
+      # Instance Configuration
+      - DEL_INSTANCE=false
+      - DEL_TEMP_INSTANCES=true
+      
+      # Database (using local storage for simplicity)
+      - DATABASE_ENABLED=false
+      
+      # Authentication (optional - set to false for local testing)
+      - AUTHENTICATION_TYPE=none
+      
+      # Webhook Configuration (optional)
+      - WEBHOOK_ENABLED=false
+      
+      # QR Code Configuration
+      - QRCODE_LIMIT=30
+      
+      # Log Level
+      - LOG_LEVEL=ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS
+      
+      # Storage
+      - STORE_MESSAGES=true
+      - STORE_MESSAGE_UP=true
+      - STORE_CONTACTS=true
+      - STORE_CHATS=true
+      
+      # Clean Store
+      - CLEAN_STORE_CLEANING_INTERVAL=7200
+      - CLEAN_STORE_MESSAGES=true
+      - CLEAN_STORE_MESSAGE_UP=true
+      - CLEAN_STORE_CONTACTS=true
+      - CLEAN_STORE_CHATS=true
+    
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    
+    restart: unless-stopped
+    
+    networks:
+      - evolution-network
+
+volumes:
+  evolution_instances:
+  evolution_store:
+
+networks:
+  evolution-network:
+    driver: bridge

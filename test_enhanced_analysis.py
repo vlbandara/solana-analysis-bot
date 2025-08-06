@@ -6,7 +6,7 @@ Shows the new comprehensive analysis without requiring API keys
 """
 
 import json
-from sol_hourly_analysis import HourlySolAnalysis
+from sol_24h_evolution_analysis import SolEvolutionAnalysis
 import os
 
 # Mock data that simulates comprehensive API response
@@ -49,7 +49,7 @@ def test_comprehensive_analysis():
     os.environ.pop('OPENAI_API_KEY', None)
     
     try:
-        analyzer = HourlySolAnalysis()
+        analyzer = SolEvolutionAnalysis()
     except:
         print("⚠️ Creating minimal analyzer for testing...")
         

@@ -1,102 +1,61 @@
-name: SOL Hourly Analysis
+name: SOL 24h Evolution Analysis
 
 on:
   schedule:
     # Run every hour at minute 5 (UTC)
     - cron: '5 * * * *'
   workflow_dispatch:
-    # Allow manual trigger
+    # Allow manual triggering
     inputs:
-      enable_whatsapp:
-        description: 'Enable WhatsApp sending'
+      send_whatsapp:
+        description: 'Send to WhatsApp'
         required: false
         default: 'true'
-        type: choice
-        options:
-        - 'true'
-        - 'false'
+        type: boolean
 
 jobs:
-  sol-analysis:
+  analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.11'
         
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      
-    - name: Create virtual environment and install dependencies
+    - name: Install dependencies
       run: |
-        uv venv
-        source .venv/bin/activate
-        uv pip install -r requirements.txt
-        uv pip install twilio python-dotenv
-        
-    - name: Verify dependencies
-      run: |
-        source .venv/bin/activate
-        python -c "import openai, requests, twilio; print('✅ All dependencies installed')"
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
         
     - name: Run SOL Analysis
       env:
+        # API Keys from GitHub Secrets
         COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        
+        # WhatsApp/Twilio credentials (optional)
         TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
         TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-        TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
-        WHATSAPP_TO_NUMBER: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
-        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.enable_whatsapp || 'true' }}
-        PYTHONPATH: ${{ github.workspace }}
-        PYTHONUNBUFFERED: '1'
-      run: |
-        source .venv/bin/activate
-        echo "🚀 Starting SOL Analysis with WhatsApp: $AUTO_SEND_TO_WHATSAPP"
-        python sol_hourly_analysis.py
+        TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+        WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
         
-    - name: Check for analysis output
-      if: always()
-      run: |
-        echo "📊 Workflow completed at $(date)"
-        if [ -f "sol_analysis_state.json" ]; then
-          echo "📄 State file created"
-          cat sol_analysis_state.json
-        fi
+        # Control WhatsApp sending
+        AUTO_SEND_TO_WHATSAPP: ${{ github.event.inputs.send_whatsapp || 'false' }}
         
-    - name: Archive analysis results
-      uses: actions/upload-artifact@v4
+      run: |
+        echo "🚀 Starting SOL 24h Evolution Analysis..."
+        python sol_24h_evolution_analysis.py
+        
+    - name: Archive analysis output
       if: always()
+      uses: actions/upload-artifact@v3
       with:
-        name: sol-analysis-${{ github.run_number }}-${{ github.run_attempt }}
+        name: sol-analysis-${{ github.run_number }}
         path: |
-          *.json
           *.log
-          *.txt
-        retention-days: 3
-        
-    - name: Notify on failure
-      if: failure()
-      env:
-        TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-        TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-        TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
-        WHATSAPP_TO_NUMBER: ${{ secrets.AUTO_SEND_TO_WHATSAPP }}
-      run: |
-        source .venv/bin/activate
-        python -c '
-        import os
-        from whatsapp_sender import WhatsAppSender
-        if os.getenv("WHATSAPP_TO_NUMBER", "").startswith("+"):
-            sender = WhatsAppSender()
-            sender.send_message("🚨 SOL Analysis Failed\n\nGitHub Actions workflow encountered an error. Check the Actions tab for details.")
-            print("✅ Failure notification sent")
-        else:
-            print("📱 WhatsApp notifications disabled - no recipient number")
-        '
+          *.json
+        retention-days: 7
