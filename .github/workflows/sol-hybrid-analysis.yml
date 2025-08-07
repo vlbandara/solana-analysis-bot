@@ -1,0 +1,67 @@
+name: SOL Hybrid Analysis
+
+on:
+  schedule:
+    # Run every hour at minute 10 (UTC) - 5 minutes after the original
+    - cron: '10 * * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      send_whatsapp:
+        description: 'Send to WhatsApp'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  hybrid-analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run SOL Hybrid Analysis
+      env:
+        # API Keys from GitHub Secrets
+        COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Used for OpenRouter/Sonar API
+        
+        # Optional OpenRouter headers (for better API tracking)
+        OPENROUTER_REFERER: ${{ secrets.OPENROUTER_REFERER || 'https://github.com/sol-hybrid-analysis' }}
+        OPENROUTER_TITLE: ${{ secrets.OPENROUTER_TITLE || 'SOL Hybrid Analysis' }}
+        
+        # WhatsApp/Twilio credentials
+        TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+        TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+        TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+        WHATSAPP_TO_NUMBERS: ${{ secrets.WHATSAPP_TO_NUMBERS }}
+        WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
+        
+        # Control WhatsApp sending
+        AUTO_SEND_TO_WHATSAPP: ${{ 'true' }}
+        
+      run: |
+        echo "🚀 Starting SOL Hybrid Analysis..."
+        echo "📊 Combining Coinalyze derivatives + Sonar technical analysis..."
+        python sol_hybrid_analysis.py
+        
+    - name: Archive hybrid analysis output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sol-hybrid-analysis-${{ github.run_number }}
+        path: |
+          *.log
+          *.json
+        retention-days: 7
