@@ -28,6 +28,9 @@ class WhatsAppSender:
     def __init__(self):
         """Initialize WhatsApp sender with Twilio credentials"""
         print("🔍 DEBUG: Initializing WhatsApp sender...")
+        # Ensure environment variables are loaded
+        load_dotenv()
+        
         self.account_sid = os.getenv('TWILIO_ACCOUNT_SID')
         self.auth_token = os.getenv('TWILIO_AUTH_TOKEN')
         self.from_number = os.getenv('TWILIO_WHATSAPP_FROM') or os.getenv('TWILIO_WHATSAPP_NUMBER')
@@ -138,8 +141,11 @@ class WhatsAppSender:
             to_param   = f'whatsapp:{self.to_number}'
             template_sid = os.getenv('TWILIO_TEMPLATE_SID')
             
+            print(f"🔍 DEBUG: Template SID from env: {template_sid}")
+            
             if not template_sid:
                 print("❌ Template SID not found")
+                print("🔍 DEBUG: Available env vars:", [k for k in os.environ.keys() if 'TEMPLATE' in k or 'TWILIO' in k])
                 return False
                 
             print(f"🔍 DEBUG: Using template SID {template_sid}")
