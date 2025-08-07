@@ -462,10 +462,17 @@ def main():
             try:
                 from whatsapp_sender import WhatsAppSender
                 sender = WhatsAppSender()
-                if sender.send_message(result):
-                    print("✅ WhatsApp message sent successfully!")
+                # Use template method if available, fallback to direct message
+                if hasattr(sender, 'send_analysis_with_template'):
+                    if sender.send_analysis_with_template(result):
+                        print("✅ WhatsApp message sent successfully with template!")
+                    else:
+                        print("❌ Failed to send WhatsApp message with template")
                 else:
-                    print("❌ Failed to send WhatsApp message")
+                    if sender.send_message(result):
+                        print("✅ WhatsApp message sent successfully!")
+                    else:
+                        print("❌ Failed to send WhatsApp message")
             except Exception as whatsapp_error:
                 print(f"❌ WhatsApp sending failed: {whatsapp_error}")
         else:

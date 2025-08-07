@@ -64,16 +64,18 @@ class WhatsAppSender:
             from_param = f'whatsapp:{self.from_number}'
             to_param   = f'whatsapp:{self.to_number}'
             template_sid = os.getenv('TWILIO_TEMPLATE_SID')
-            if template_sid:
-                import json as _json
+            
+            if template_sid and template_vars:
                 print(f"🔍 DEBUG: Using template SID {template_sid}")
+                print(f"🔍 DEBUG: Template variables: {template_vars}")
                 message = self.client.messages.create(
                     from_=from_param,
                     to=to_param,
                     content_sid=template_sid,
-                    content_variables=_json.dumps(template_vars or {})
+                    content_variables=json.dumps(template_vars)
                 )
             else:
+                print("🔍 DEBUG: Using direct message (no template)")
                 message = self.client.messages.create(
                     from_=from_param,
                     body=message,
@@ -105,6 +107,110 @@ class WhatsAppSender:
             print(f"❌ WhatsApp send error: {e}")
             return False
 
+    def send_analysis_with_template(self, analysis: str) -> bool:
+        """Send analysis using Twilio template with parsed variables"""
+        try:
+            # Parse the analysis to extract template variables
+            template_vars = self._parse_analysis_for_template(analysis)
+            
+            if template_vars:
+                print("🔍 DEBUG: Using template with variables")
+                return self.send_message("", template_vars)
+            else:
+                print("🔍 DEBUG: Falling back to direct message")
+                return self.send_message(analysis)
+                
+        except Exception as e:
+            print(f"❌ Error sending analysis with template: {e}")
+            return False
+
+    def _parse_analysis_for_template(self, analysis: str) -> dict | None:
+        """Parse analysis text to extract template variables"""
+        try:
+            lines = analysis.split('\n')
+            template_vars = {}
+            
+            # Extract signal
+            for line in lines:
+                if "🚨 SIGNAL:" in line or "🚨 **SIGNAL**:" in line:
+                    signal = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    signal = signal.replace("**", "").replace("*", "")
+                    template_vars["1"] = signal
+                    break
+            
+            # Extract setup
+            for i, line in enumerate(lines):
+                if "📊 SETUP:" in line or "📊 **SETUP**:" in line:
+                    setup_lines = []
+                    for j in range(i + 1, len(lines)):
+                        next_line = lines[j].strip()
+                        if next_line.startswith("📰") or next_line.startswith("🎯"):
+                            break
+                        if next_line:
+                            # Remove markdown formatting
+                            next_line = next_line.replace("**", "").replace("*", "")
+                            setup_lines.append(next_line)
+                    template_vars["2"] = " ".join(setup_lines)
+                    break
+            
+            # Extract news
+            for line in lines:
+                if "📰 NEWS:" in line or "📰 **NEWS**:" in line:
+                    news = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    news = news.replace("**", "").replace("*", "")
+                    template_vars["3"] = news
+                    break
+            
+            # Extract entry
+            for line in lines:
+                if "🎯 ENTRY:" in line or "🎯 **ENTRY**:" in line:
+                    entry = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    entry = entry.replace("**", "").replace("*", "")
+                    template_vars["4"] = entry
+                    break
+            
+            # Extract stop
+            for line in lines:
+                if "⛔ STOP:" in line or "⛔ **STOP**:" in line:
+                    stop = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    stop = stop.replace("**", "").replace("*", "")
+                    template_vars["5"] = stop
+                    break
+            
+            # Extract target
+            for line in lines:
+                if "🎪 TARGET:" in line or "🎪 **TARGET**:" in line:
+                    target = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    target = target.replace("**", "").replace("*", "")
+                    template_vars["6"] = target
+                    break
+            
+            # Extract risk
+            for line in lines:
+                if "⚠️ RISK:" in line or "⚠️ **RISK**:" in line:
+                    risk = line.split(":", 1)[1].strip()
+                    # Remove markdown formatting
+                    risk = risk.replace("**", "").replace("*", "")
+                    template_vars["7"] = risk
+                    break
+            
+            # Check if we have all required variables
+            required_vars = ["1", "2", "3", "4", "5", "6", "7"]
+            if all(var in template_vars for var in required_vars):
+                print(f"✅ Parsed template variables: {template_vars}")
+                return template_vars
+            else:
+                print(f"⚠️ Missing template variables. Found: {list(template_vars.keys())}")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Error parsing analysis for template: {e}")
+            return None
     
     def send_analysis_summary(self, analysis_data: Dict[str, Any]) -> bool:
         """Send a concise analysis summary to WhatsApp"""
