@@ -415,24 +415,8 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
     # ---------------------------------------------------------------------
     def format_hybrid_result(self, derivatives_data: Snapshot, analysis: str) -> str:
         """Format the complete hybrid analysis result."""
-        utc_time = datetime.now(timezone.utc).strftime("%H:%M UTC")
-        
-        header = (
-            f"🔥 SOL HYBRID ANALYSIS • {utc_time}\n"
-            f"📊 ${derivatives_data['price']:.2f} ({derivatives_data['price_24h_change']:+.1f}% 24h) | "
-            f"OI: ${derivatives_data['oi_usd']/1e6:.1f}M | "
-            f"Funding: {derivatives_data['funding_pct']:.3f}%\n"
-            f"{'='*60}\n\n"
-        )
-        
-        footer = (
-            f"\n{'='*60}\n"
-            f"🔬 Hybrid: Coinalyze derivatives + Sonar technical analysis\n"
-            f"📡 Real-time: Technical patterns + Fresh news (last hour)\n"
-            f"🎯 Focus: WhatsApp trading updates"
-        )
-        
-        return header + analysis + footer
+        # Return just the analysis without header and footer for concise WhatsApp messages
+        return analysis
 
     # ---------------------------------------------------------------------
     # Main Execution
