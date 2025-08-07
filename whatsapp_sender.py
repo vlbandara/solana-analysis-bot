@@ -115,13 +115,67 @@ class WhatsAppSender:
             
             if template_vars:
                 print("🔍 DEBUG: Using template with variables")
-                return self.send_message("", template_vars)
+                # Don't pass empty message body when using template
+                return self._send_with_template(template_vars)
             else:
                 print("🔍 DEBUG: Falling back to direct message")
                 return self.send_message(analysis)
                 
         except Exception as e:
             print(f"❌ Error sending analysis with template: {e}")
+            return False
+
+    def _send_with_template(self, template_vars: dict) -> bool:
+        """Send message using Twilio template"""
+        if not self.client:
+            print("❌ Twilio client not available")
+            return False
+        
+        try:
+            print(f"🔍 DEBUG: Sending to: whatsapp:{self.to_number}")
+            print(f"🔍 DEBUG: From: whatsapp:{self.from_number}")
+            from_param = f'whatsapp:{self.from_number}'
+            to_param   = f'whatsapp:{self.to_number}'
+            template_sid = os.getenv('TWILIO_TEMPLATE_SID')
+            
+            if not template_sid:
+                print("❌ Template SID not found")
+                return False
+                
+            print(f"🔍 DEBUG: Using template SID {template_sid}")
+            print(f"🔍 DEBUG: Template variables: {template_vars}")
+            
+            message = self.client.messages.create(
+                from_=from_param,
+                to=to_param,
+                content_sid=template_sid,
+                content_variables=json.dumps(template_vars)
+            )
+            
+            print(f"✅ Twilio accepted message: {message.sid}. Checking delivery status …")
+            try:
+                # poll up to ~20 s for delivered/failed
+                import time
+                for _ in range(10):
+                    status = self.client.messages(message.sid).fetch().status
+                    print(f"   ↪ current status: {status}")
+                    if status in {"delivered","failed","undelivered"}:
+                        break
+                    time.sleep(2)
+                if status == "delivered":
+                    print("✅ WhatsApp reports DELIVERED")
+                    return True
+                else:
+                    print(f"⚠️ Message not delivered (final status: {status}). Check opt-in / template / sandbox join.")
+                    return False
+            except Exception as ex:
+                print(f"⚠️ Could not verify delivery status: {ex}")
+                return True
+        except TwilioException as e:
+            print(f"❌ Twilio error: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ WhatsApp send error: {e}")
             return False
 
     def _parse_analysis_for_template(self, analysis: str) -> dict | None:
