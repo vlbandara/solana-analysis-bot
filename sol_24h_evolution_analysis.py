@@ -484,11 +484,23 @@ class SolEvolutionAnalysis:  # pylint: disable=too-many-instance-attributes
             print("-" * 60)
 
             if os.getenv("AUTO_SEND_TO_WHATSAPP", "true").lower() == "true":
-                sender = WhatsAppSender()
-                if sender.send_message(whatsapp_msg):
-                    print("✅ WhatsApp sent successfully")
+                recipients_env = os.getenv("WHATSAPP_TO_NUMBERS") or os.getenv("WHATSAPP_TO_NUMBER", "")
+                recipients = [p.strip() for p in recipients_env.split(",") if p.strip()]
+                if not recipients:
+                    print("⚠️  No WhatsApp recipients configured")
                 else:
-                    print("❌ WhatsApp send failed")
+                    sender = WhatsAppSender()
+                    delivered, failed = [], []
+                    for phone in recipients:
+                        sender.to_number = phone  # override target dynamically
+                        if sender.send_message(whatsapp_msg):
+                            delivered.append(phone)
+                        else:
+                            failed.append(phone)
+                    if delivered:
+                        print(f"✅ Delivered to: {', '.join(delivered)}")
+                    if failed:
+                        print(f"⚠️ Failed to deliver to: {', '.join(failed)}")
             else:
                 print("📱 AUTO_SEND_TO_WHATSAPP disabled")
         except Exception as exc:  # noqa: BLE001,E722
