@@ -31,6 +31,7 @@ class WhatsAppSender:
         self.account_sid = os.getenv('TWILIO_ACCOUNT_SID')
         self.auth_token = os.getenv('TWILIO_AUTH_TOKEN')
         self.from_number = os.getenv('TWILIO_WHATSAPP_FROM') or os.getenv('TWILIO_WHATSAPP_NUMBER')
+        # Single number is optional now; multiple numbers supported via WHATSAPP_TO_NUMBERS
         self.to_number = os.getenv('WHATSAPP_TO_NUMBER')
         
         print(f"🔍 DEBUG: Account SID: {'✅ Set' if self.account_sid else '❌ Missing'}")
@@ -38,8 +39,8 @@ class WhatsAppSender:
         print(f"🔍 DEBUG: From Number: {'✅ Set' if self.from_number else '❌ Missing'}")
         print(f"🔍 DEBUG: To Number: {'✅ Set' if self.to_number else '❌ Missing'}")
         
-        if not all([self.account_sid, self.auth_token, self.from_number, self.to_number]):
-            print("⚠️ Missing Twilio credentials in .env file")
+        if not all([self.account_sid, self.auth_token, self.from_number]):
+            print("⚠️ Missing Twilio credentials (account_sid/auth_token/from). Check environment variables.")
             self.client = None
         elif TWILIO_AVAILABLE:
             print("🔍 DEBUG: Creating Twilio client...")
@@ -51,59 +52,80 @@ class WhatsAppSender:
 
     
 
+    def _parse_recipients(self) -> list[str]:
+        """Parse recipients from WHATSAPP_TO_NUMBERS or fallback to WHATSAPP_TO_NUMBER."""
+        raw = os.getenv('WHATSAPP_TO_NUMBERS', '')
+        recipients: list[str] = []
+        if raw:
+            # Split by commas, semicolons, whitespace, or newlines
+            import re
+            parts = re.split(r"[\s,;]+", raw)
+            recipients = [p.strip() for p in parts if p.strip()]
+        # Fallback to single number
+        if not recipients and self.to_number:
+            recipients = [self.to_number.strip()]
+        return recipients
+
     def send_message(self, message: str, template_vars: dict | None = None) -> bool:
-        """Send message to WhatsApp"""
+        """Send message to all configured WhatsApp recipients."""
         print("🔍 DEBUG: Attempting to send WhatsApp message...")
         if not self.client:
             print("❌ Twilio client not available")
             return False
-        
-        try:
-            print(f"🔍 DEBUG: Sending to: whatsapp:{self.to_number}")
-            print(f"🔍 DEBUG: From: whatsapp:{self.from_number}")
-            from_param = f'whatsapp:{self.from_number}'
-            to_param   = f'whatsapp:{self.to_number}'
-            template_sid = os.getenv('TWILIO_TEMPLATE_SID')
-            if template_sid:
-                import json as _json
-                print(f"🔍 DEBUG: Using template SID {template_sid}")
-                message = self.client.messages.create(
-                    from_=from_param,
-                    to=to_param,
-                    content_sid=template_sid,
-                    content_variables=_json.dumps(template_vars or {})
-                )
-            else:
-                message = self.client.messages.create(
-                    from_=from_param,
-                    body=message,
-                    to=to_param
-                )
-            print(f"✅ Twilio accepted message: {message.sid}. Checking delivery status …")
+
+        recipients = self._parse_recipients()
+        if not recipients:
+            print("❌ No WhatsApp recipients configured. Set WHATSAPP_TO_NUMBERS or WHATSAPP_TO_NUMBER.")
+            return False
+
+        from_param = f'whatsapp:{self.from_number}'
+        template_sid = os.getenv('TWILIO_TEMPLATE_SID')
+
+        any_success = False
+        for recipient in recipients:
             try:
-                # poll up to ~20 s for delivered/failed
-                import time
-                for _ in range(10):
-                    status = self.client.messages(message.sid).fetch().status
-                    print(f"   ↪ current status: {status}")
-                    if status in {"delivered","failed","undelivered"}:
-                        break
-                    time.sleep(2)
-                if status == "delivered":
-                    print("✅ WhatsApp reports DELIVERED")
-                    return True
+                to_param = f'whatsapp:{recipient}'
+                print(f"🔍 DEBUG: From: {from_param} -> To: {to_param}")
+                if template_sid:
+                    import json as _json
+                    print(f"🔍 DEBUG: Using template SID {template_sid}")
+                    msg_obj = self.client.messages.create(
+                        from_=from_param,
+                        to=to_param,
+                        content_sid=template_sid,
+                        content_variables=_json.dumps(template_vars or {})
+                    )
                 else:
-                    print(f"⚠️ Message not delivered (final status: {status}). Check opt-in / template / sandbox join.")
-                    return False
-            except Exception as ex:
-                print(f"⚠️ Could not verify delivery status: {ex}")
-                return True
-        except TwilioException as e:
-            print(f"❌ Twilio error: {e}")
-            return False
-        except Exception as e:
-            print(f"❌ WhatsApp send error: {e}")
-            return False
+                    msg_obj = self.client.messages.create(
+                        from_=from_param,
+                        body=message,
+                        to=to_param
+                    )
+                print(f"✅ Twilio accepted message: {msg_obj.sid}. Checking delivery status …")
+                try:
+                    # poll up to ~20 s for delivered/failed
+                    import time
+                    status = "queued"
+                    for _ in range(10):
+                        status = self.client.messages(msg_obj.sid).fetch().status
+                        print(f"   ↪ current status for {recipient}: {status}")
+                        if status in {"delivered","failed","undelivered"}:
+                            break
+                        time.sleep(2)
+                    if status == "delivered":
+                        print(f"✅ WhatsApp reports DELIVERED to {recipient}")
+                        any_success = True
+                    else:
+                        print(f"⚠️ Message not delivered to {recipient} (final status: {status}).")
+                except Exception as ex:
+                    print(f"⚠️ Could not verify delivery status for {recipient}: {ex}")
+                    any_success = True  # assume success if Twilio accepted
+            except TwilioException as e:
+                print(f"❌ Twilio error for {recipient}: {e}")
+            except Exception as e:
+                print(f"❌ WhatsApp send error for {recipient}: {e}")
+
+        return any_success
 
     
     def send_analysis_summary(self, analysis_data: Dict[str, Any]) -> bool:

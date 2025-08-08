@@ -85,14 +85,8 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
         # Open Interest
         oi_usd, oi_24h_change, oi_6h_change, oi_history = self._collect_open_interest(now)
         
-        # Funding rates
-        funding_rate, predicted_funding_rate, funding_6h_change, funding_history, funding_predicted_diff = self._collect_funding(now)
-        
-        # Validate funding rates - if predicted is too high, use current only
-        if predicted_funding_rate > 0.5:  # More than 0.5% is suspicious
-            print(f"⚠️  Suspicious predicted funding rate: {predicted_funding_rate:.3f}% - using current only")
-            predicted_funding_rate = funding_rate
-            funding_predicted_diff = 0.0
+        # Funding rates (predicted removed)
+        funding_rate, funding_6h_change, funding_history = self._collect_funding(now)
         
         # Long/Short ratios
         ls_ratio, ls_24h_avg, ls_24h_change, ls_6h_change, ls_history = self._collect_long_short(now)
@@ -109,9 +103,7 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             "oi_24h_change": oi_24h_change,
             "oi_6h_change": oi_6h_change,
             "funding_pct": funding_rate,
-            "predicted_funding_pct": predicted_funding_rate,
             "funding_6h_change": funding_6h_change,
-            "funding_predicted_diff": funding_predicted_diff,
             "ls_ratio": ls_ratio,
             "ls_24h_avg": ls_24h_avg,
             "ls_24h_change": ls_24h_change,
@@ -193,17 +185,12 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             print(f"⚠️  Open-Interest data error: {exc}")
         return oi_usd, oi_24h_change, oi_6h_change, oi_history
 
-    def _collect_funding(self, now: int) -> Tuple[float, float, float, History, float]:
-        funding_rate = predicted_funding_rate = funding_6h_change = 0.0
-        funding_predicted_diff = 0.0
+    def _collect_funding(self, now: int) -> Tuple[float, float, History]:
+        funding_rate = funding_6h_change = 0.0
         funding_history: History = []
         try:
             data_now = self._api_get("/funding-rate", {"symbols": self.perp_symbol})
             funding_rate = float(data_now[0]["value"]) * 100 if data_now else 0.0
-
-            data_pred = self._api_get("/predicted-funding-rate", {"symbols": self.perp_symbol})
-            predicted_funding_rate = float(data_pred[0]["value"]) * 100 if data_pred else 0.0
-            funding_predicted_diff = predicted_funding_rate - funding_rate
 
             hist_raw = self._api_get(
                 "/funding-rate-history",
@@ -223,10 +210,8 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             print(f"⚠️  Funding data error: {exc}")
         return (
             funding_rate,
-            predicted_funding_rate,
             funding_6h_change,
             [v * 100 for v in funding_history],  # convert to percentage for display
-            funding_predicted_diff,
         )
 
     def _collect_long_short(self, now: int) -> Tuple[float, float, float, float, History]:
@@ -290,8 +275,7 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
         """Print derivatives data summary."""
         print(f"💰 Price: ${s['price']:.2f} ({s['price_24h_change']:+.1f}% 24h)")
         print(f"🏦 OI: ${s['oi_usd']/1e6:.1f}M ({s['oi_24h_change']:+.1f}% 24h)")
-        print(f"💸 Funding: {s['funding_pct']:.3f}% → {s['predicted_funding_pct']:.3f}%")
-        print(f"   Raw: {s['funding_pct']/100:.6f} → {s['predicted_funding_pct']/100:.6f}")
+        print(f"💸 Funding: {s['funding_pct']:.3f}%")
         print(f"⚖️  L/S: {s['ls_ratio']:.2f} (avg: {s['ls_24h_avg']:.2f}, {s['ls_24h_change']:+.1f}%)")
         print(f"🔥 Liq: ${s['long_liq_24h']/1e6:.1f}M L / ${s['short_liq_24h']/1e6:.1f}M S")
 
@@ -314,8 +298,7 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             f"DERIVATIVES DATA (Coinalyze):\n"
             f"• Price: ${derivatives_data['price']:.2f} ({derivatives_data['price_24h_change']:+.1f}% 24h, {derivatives_data['price_6h_change']:+.1f}% 6h)\n"
             f"• Open Interest: ${derivatives_data['oi_usd']/1e6:.1f}M ({derivatives_data['oi_24h_change']:+.1f}% 24h, {derivatives_data['oi_6h_change']:+.1f}% 6h)\n"
-            f"• Funding: {derivatives_data['funding_pct']:.3f}% → {derivatives_data['predicted_funding_pct']:.3f}% (Δ{derivatives_data['funding_predicted_diff']:+.3f}%)\n"
-            f"• Funding Raw: {derivatives_data['funding_pct']/100:.6f} → {derivatives_data['predicted_funding_pct']/100:.6f}\n"
+            f"• Funding: {derivatives_data['funding_pct']:.3f}% (6h Δ {derivatives_data['funding_6h_change']:+.3f}%)\n"
             f"• Long/Short: {derivatives_data['ls_ratio']:.2f} (24h avg: {derivatives_data['ls_24h_avg']:.2f}, {derivatives_data['ls_24h_change']:+.1f}%)\n"
             f"• Liquidations: ${derivatives_data['long_liq_24h']/1e6:.1f}M longs / ${derivatives_data['short_liq_24h']/1e6:.1f}M shorts (24h)\n"
             f"• Price Series: [{_csv(derivatives_data['price_history'][-12:], '{:.2f}')}] (last 12h)\n"
