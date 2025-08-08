@@ -308,6 +308,7 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
         # Enhanced prompt for hybrid analysis
         prompt = (
             f"{derivatives_summary}\n\n"
+            f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
             
             "HYBRID ANALYSIS TASK:\n"
             "1. TECHNICAL ANALYSIS (CURRENT DATA ONLY):\n"
@@ -320,10 +321,11 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             "   - IGNORE patterns, triangles, flags, historical patterns - focus ONLY on current price action\n"
             "   - CRITICAL: Do NOT reference previous analysis, historical context, or patterns from past data\n\n"
             
-            "2. FRESH NEWS (Last Hour Only):\n"
-            "   - Check CoinDesk, CryptoPanic, Decrypt for SOL news in LAST 60 MINUTES only\n"
-            "   - Include only if directly impactful to SOL price\n"
-            "   - Ignore older news or general crypto sentiment\n\n"
+            f"2. FRESH NEWS (Last 60 minutes only; use CURRENT TIME above as reference):\n"
+            "   - Check CoinDesk, CryptoPanic, Decrypt\n"
+            "   - Only include items published within the last 60 minutes\n"
+            "   - Each item must include: [HH:MM UTC] – Title – Source (URL)\n"
+            "   - If no qualifying item exists, set NEWS: None\n\n"
             
 
             
@@ -336,7 +338,7 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             "RESPONSE FORMAT:\n"
             "🚨 SIGNAL: [LONG|SHORT|WAIT]\n"
             "📊 SETUP: [Brief technical + derivatives correlation]\n"
-            "📰 NEWS: [Recent news or 'None']\n"
+            "📰 NEWS: [[HH:MM UTC] – Title – Source (URL)] or 'None'\n"
             "🎯 ENTRY: [Entry zone]\n"
             "⛔ STOP: [Stop loss]\n"
             "🎪 TARGET: [Target level]\n"
@@ -352,7 +354,8 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             "4. Focus ONLY on current price action and derivatives correlation\n"
             "5. Keep responses brief and actionable\n"
             "6. Only include news from the last 60 minutes\n"
-            "7. Base analysis ONLY on the derivatives data and current chart levels provided"
+            "7. For any news item, include timestamp (HH:MM UTC) and a source link; if none within 60 minutes, output 'None'\n"
+            "8. Base analysis ONLY on the derivatives data and current chart levels provided"
         )
 
         print("🧠 Generating hybrid analysis with Sonar...")
