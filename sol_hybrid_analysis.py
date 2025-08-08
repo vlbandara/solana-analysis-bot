@@ -280,6 +280,164 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
         print(f"🔥 Liq: ${s['long_liq_24h']/1e6:.1f}M L / ${s['short_liq_24h']/1e6:.1f}M S")
 
     # ---------------------------------------------------------------------
+    # Feature Engineering for Reliable Signals
+    # ---------------------------------------------------------------------
+    @staticmethod
+    def _safe_std(values: List[float]) -> float:
+        if not values or len(values) < 2:
+            return 0.0
+        try:
+            return statistics.pstdev(values)
+        except Exception:
+            return 0.0
+
+    @staticmethod
+    def _zscore_of_last(series: List[float]) -> float:
+        if not series or len(series) < 3:
+            return 0.0
+        mean_val = statistics.mean(series[:-1])
+        std_val = SOLHybridAnalysis._safe_std(series[:-1])
+        if std_val == 0:
+            return 0.0
+        return (series[-1] - mean_val) / std_val
+
+    @staticmethod
+    def _pct_change(a: float, b: float) -> float:
+        if b == 0:
+            return 0.0
+        return ((a - b) / b) * 100.0
+
+    @staticmethod
+    def _returns(series: List[float]) -> List[float]:
+        if not series or len(series) < 2:
+            return []
+        returns: List[float] = []
+        for i in range(1, len(series)):
+            prev = series[i - 1]
+            curr = series[i]
+            if prev == 0:
+                returns.append(0.0)
+            else:
+                returns.append((curr - prev) / prev)
+        return returns
+
+    def _assess_regime(self, price_history: History) -> Dict[str, Any]:
+        regime: Dict[str, Any] = {"trend": "side", "volatility": "normal", "chop": False}
+        if not price_history or len(price_history) < 8:
+            return regime
+        # Trend via short (4h) vs long (12h) moving averages
+        short_ma = statistics.mean(price_history[-4:])
+        long_ma = statistics.mean(price_history[-12:]) if len(price_history) >= 12 else statistics.mean(price_history)
+        if short_ma > long_ma * 1.001:
+            regime["trend"] = "up"
+        elif short_ma < long_ma * 0.999:
+            regime["trend"] = "down"
+        else:
+            regime["trend"] = "side"
+        # Volatility via stdev of 1h returns (last 24 samples if available)
+        rets = self._returns(price_history[-25:])
+        vol = self._safe_std(rets)
+        # Simple bands for low/normal/high
+        if vol < 0.002:
+            regime["volatility"] = "low"
+        elif vol > 0.008:
+            regime["volatility"] = "high"
+        else:
+            regime["volatility"] = "normal"
+        # Chop if low vol and side trend
+        regime["chop"] = (regime["volatility"] == "low" and regime["trend"] == "side")
+        return regime
+
+    def _detect_divergences(self, s: Snapshot) -> List[str]:
+        notes: List[str] = []
+        p6 = s.get("price_6h_change", 0.0)
+        oi6 = s.get("oi_6h_change", 0.0)
+        f6 = s.get("funding_6h_change", 0.0)
+        # Price up but OI down => short covering
+        if p6 > 0.5 and oi6 < -0.5:
+            notes.append("Price↑ + OI↓ (short covering)")
+        # Price down but OI up => aggressive shorts
+        if p6 < -0.5 and oi6 > 0.5:
+            notes.append("Price↓ + OI↑ (new shorts)")
+        # Funding stress vs price
+        if p6 > 0.5 and f6 < -0.01:
+            notes.append("Price↑ + Funding↓ (stress)")
+        if p6 < -0.5 and f6 > 0.01:
+            notes.append("Price↓ + Funding↑ (stress)")
+        return notes
+
+    def _compute_confidence(self, s: Snapshot, regime: Dict[str, Any], z: Dict[str, float], divergences: List[str]) -> Tuple[int, str, List[str]]:
+        long_score = 50
+        short_score = 50
+        drivers: List[str] = []
+        # Alignment: price vs OI
+        p6 = s.get("price_6h_change", 0.0)
+        oi6 = s.get("oi_6h_change", 0.0)
+        if p6 > 0.5 and oi6 > 0.5:
+            long_score += 15; drivers.append("Price↑ + OI↑ (continuation)")
+        if p6 < -0.5 and oi6 < -0.5:
+            short_score += 15; drivers.append("Price↓ + OI↓ (continuation)")
+        # Funding supports direction
+        funding = s.get("funding_pct", 0.0)
+        if funding > 0.02:
+            long_score += 10; drivers.append("Funding positive")
+        if funding < -0.02:
+            short_score += 10; drivers.append("Funding negative")
+        # L/S extremes penalize crowded side
+        ls = s.get("ls_ratio", 0.0)
+        if ls > 3.0:
+            short_score += 5; drivers.append("Crowded longs (L/S>")
+        if ls < 1.0 and ls > 0:
+            long_score += 5; drivers.append("Crowded shorts (L/S<)")
+        # Regime filters
+        if regime.get("trend") == "up":
+            long_score += 5
+        if regime.get("trend") == "down":
+            short_score += 5
+        if regime.get("chop"):
+            long_score -= 5; short_score -= 5; drivers.append("Chop regime")
+        # Divergences reduce confidence in directional calls
+        if divergences:
+            long_score -= 5; short_score -= 5; drivers.extend(divergences)
+        # Compose signal
+        delta = long_score - short_score
+        if delta > 10:
+            auto = "LONG"
+            conf = min(100, max(0, long_score))
+        elif delta < -10:
+            auto = "SHORT"
+            conf = min(100, max(0, short_score))
+        else:
+            auto = "WAIT"
+            conf = min(100, max(0, 50 - abs(delta)))
+        return int(conf), auto, drivers[:4]
+
+    def _compute_features(self, s: Snapshot) -> Dict[str, Any]:
+        # Z-scores for last values
+        z_funding = self._zscore_of_last(s.get("funding_history", []) or [])
+        z_oi = self._zscore_of_last(s.get("oi_history", []) or [])
+        z_ls = self._zscore_of_last(s.get("ls_history", []) or [])
+        regime = self._assess_regime(s.get("price_history", []) or [])
+        divergences = self._detect_divergences(s)
+        z = {"funding": z_funding, "oi": z_oi, "ls": z_ls}
+        confidence, auto_signal, drivers = self._compute_confidence(s, regime, z, divergences)
+        # Build compact summary
+        feats_lines = [
+            f"Z(funding)={z_funding:+.2f}, Z(oi)={z_oi:+.2f}, Z(ls)={z_ls:+.2f}",
+            f"Regime: trend={regime['trend']}, vol={regime['volatility']}, chop={regime['chop']}",
+        ]
+        if drivers:
+            feats_lines.append("Drivers: " + "; ".join(drivers))
+        if divergences:
+            feats_lines.append("Divergences: " + "; ".join(divergences))
+        return {
+            "summary": "\n".join(feats_lines),
+            "confidence": confidence,
+            "auto_signal": auto_signal,
+            "drivers": drivers,
+        }
+
+    # ---------------------------------------------------------------------
     # Sonar Enhanced Analysis (Technical + Fresh News)
     # ---------------------------------------------------------------------
     def analyze_with_sonar(self, derivatives_data: Snapshot) -> str:
@@ -305,9 +463,18 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             f"• OI Series: [{_csv(derivatives_data['oi_history'][-12:], '{:.0f}')}] (last 12h)\n"
         )
 
+        # Compute features and confidence
+        features = self._compute_features(derivatives_data)
+        features_block = (
+            "FEATURES:\n"
+            f"{features['summary']}\n"
+            f"Auto: {features['auto_signal']} | Confidence: {features['confidence']}/100\n"
+        )
+
         # Enhanced prompt for hybrid analysis
         prompt = (
             f"{derivatives_summary}\n\n"
+            f"{features_block}\n"
             f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
             
             "HYBRID ANALYSIS TASK:\n"
@@ -401,8 +568,15 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
     # ---------------------------------------------------------------------
     def format_hybrid_result(self, derivatives_data: Snapshot, analysis: str) -> str:
         """Format the complete hybrid analysis result."""
-        # Return just the analysis without header and footer for concise WhatsApp messages
-        return analysis
+        try:
+            features = self._compute_features(derivatives_data)
+            header = (
+                f"🤖 Auto: {features['auto_signal']} | Confidence: {features['confidence']}/100\n"
+            )
+            # Keep concise for WhatsApp
+            return header + analysis
+        except Exception:
+            return analysis
 
     # ---------------------------------------------------------------------
     # Main Execution
