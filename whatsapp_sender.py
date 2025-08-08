@@ -143,13 +143,6 @@ class WhatsAppSender:
             for i, line in enumerate(lines):
                 if "📊 SETUP:" in line or "📊 **SETUP**:" in line:
                     setup_lines = []
-                    # Get the setup content from the same line
-                    setup_content = line.split(":", 1)[1].strip()
-                    setup_content = setup_content.replace("**", "").replace("*", "")
-                    if setup_content:
-                        setup_lines.append(setup_content)
-                    
-                    # Check for additional setup lines
                     for j in range(i + 1, len(lines)):
                         next_line = lines[j].strip()
                         if next_line.startswith("📰") or next_line.startswith("🎯"):
