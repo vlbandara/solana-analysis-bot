@@ -88,10 +88,20 @@ class WhatsAppSender:
             print("💡 You can create a template in Twilio Console or use the default one")
             return False
 
+        print(f"🔍 DEBUG: From WhatsApp number: {self.from_number}")
+        print(f"🔍 DEBUG: Template SID: {template_sid}")
+        print(f"🔍 DEBUG: Recipients: {recipients}")
+
         any_success = False
         for recipient in recipients:
             try:
-                to_param = f'whatsapp:{recipient}'
+                # Validate phone number format
+                clean_number = recipient.replace('+', '').replace(' ', '').replace('-', '')
+                if not clean_number.isdigit():
+                    print(f"⚠️  Invalid phone number format: {recipient}")
+                    continue
+                
+                to_param = f'whatsapp:{clean_number}'
                 print(f"🔍 DEBUG: From: {from_param} -> To: {to_param}")
                 print(f"🔍 DEBUG: Using template SID {template_sid}")
                 
@@ -111,17 +121,25 @@ class WhatsAppSender:
                     status = "queued"
                     for _ in range(10):
                         status = self.client.messages(msg_obj.sid).fetch().status
-                        print(f"   ↪ current status for {recipient}: {status}")
+                        print(f"   ↪ current status for {clean_number}: {status}")
                         if status in {"delivered","failed","undelivered"}:
                             break
                         time.sleep(2)
+                    
                     if status == "delivered":
-                        print(f"✅ WhatsApp reports DELIVERED to {recipient}")
+                        print(f"✅ WhatsApp reports DELIVERED to {clean_number}")
                         any_success = True
+                    elif status == "undelivered":
+                        print(f"⚠️  Message UNDELIVERED to {clean_number}")
+                        print(f"💡 Possible causes:")
+                        print(f"   - Number not registered with WhatsApp")
+                        print(f"   - Incorrect phone number format")
+                        print(f"   - WhatsApp Business account setup issue")
+                        print(f"   - Template variable mismatch")
                     else:
-                        print(f"⚠️ Message not delivered to {recipient} (final status: {status}).")
+                        print(f"⚠️ Message not delivered to {clean_number} (final status: {status}).")
                 except Exception as ex:
-                    print(f"⚠️ Could not verify delivery status for {recipient}: {ex}")
+                    print(f"⚠️ Could not verify delivery status for {clean_number}: {ex}")
                     any_success = True  # assume success if Twilio accepted
             except TwilioException as e:
                 print(f"❌ Twilio error for {recipient}: {e}")
@@ -286,6 +304,58 @@ class WhatsAppSender:
         
         return template_message, template_vars
 
+    def test_template_setup(self) -> bool:
+        """Test the WhatsApp template setup and variables"""
+        print("🧪 Testing WhatsApp template setup...")
+        
+        template_sid = os.getenv('TWILIO_TEMPLATE_SID')
+        if not template_sid:
+            print("❌ TWILIO_TEMPLATE_SID not set")
+            return False
+            
+        print(f"✅ Template SID: {template_sid}")
+        
+        # Test with sample template variables
+        test_vars = {
+            '1': '12:00',
+            '2': '100.00',
+            '3': '+2.5',
+            '4': '150',
+            '5': '+1.2',
+            '6': '0.045',
+            '7': '+0.012',
+            '8': '2.34',
+            '9': 'LONG',
+            '10': 'Test correlation',
+            '11': 'Test positioned',
+            '12': 'Test prepare'
+        }
+        
+        print("🔍 Testing template variables:")
+        for key, value in test_vars.items():
+            print(f"   {{{{{key}}}}} = {value}")
+        
+        # Test message creation (without sending)
+        try:
+            test_message, extracted_vars = self._create_whatsapp_summary(
+                "Price: $100.00 (+2.5% 24h)\nOI: $150M (+1.2%)\nFunding: 0.045% (6h Δ +0.012%)\nL/S: 2.34\nAuto Signal: LONG\nConfidence: 75/100",
+                'Test Model',
+                '12:00 UTC'
+            )
+            
+            print("\n✅ Template message created successfully:")
+            print(test_message)
+            
+            print("\n✅ Extracted variables:")
+            for key, value in extracted_vars.items():
+                print(f"   {key}: {value}")
+                
+            return True
+            
+        except Exception as e:
+            print(f"❌ Template test failed: {e}")
+            return False
+
 def send_analysis_to_whatsapp(analysis_file: str) -> bool:
     """Send analysis results to WhatsApp"""
     try:
@@ -310,6 +380,15 @@ def send_alert_to_whatsapp(message: str) -> bool:
     """Send a simple alert message to WhatsApp"""
     sender = WhatsAppSender()
     return sender.send_message(message)
+
+def test_whatsapp_template():
+    """Test function for WhatsApp template setup"""
+    try:
+        sender = WhatsAppSender()
+        return sender.test_template_setup()
+    except Exception as e:
+        print(f"❌ WhatsApp test failed: {e}")
+        return False
 
 if __name__ == "__main__":
     # Test WhatsApp sender
