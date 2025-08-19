@@ -146,61 +146,141 @@ class WhatsAppSender:
             return False
     
     def _create_whatsapp_summary(self, analysis: str, model_used: str, timestamp: str) -> str:
-        """Create a concise WhatsApp-friendly summary"""
+        """Create a WhatsApp message using the approved template format"""
         
-        # Extract key trading information
+        # Extract key information from the analysis
         lines = analysis.split('\n')
-        summary_lines = []
         
-        # Add header
-        summary_lines.append("🚀 SOLANA ANALYSIS UPDATE")
-        summary_lines.append("=" * 30)
+        # Initialize template variables
+        template_vars = {
+            '1': datetime.now().strftime('%H:%M'),  # Current UTC time
+            '2': '0.00',  # Current price
+            '3': '0.0',   # 24h change
+            '4': '0',     # OI in millions
+            '5': '0.0',   # OI change
+            '6': '0.000', # Current funding rate
+            '7': '0.000', # Funding rate change
+            '8': '0.00',  # L/S ratio
+            '9': 'WAIT',  # Signal
+            '10': 'Analysis unavailable',  # Correlation
+            '11': 'No position',  # Positioned
+            '12': 'Monitor price action'  # Prepare
+        }
         
-        # Extract price and key metrics
-        price_info = ""
+        # Extract price information
         for line in lines:
-            if "Spot reference:" in line or "Spot reference:" in line:
-                price_info = line.split("$")[-1].split()[0]
-                break
+            if "Price:" in line and "$" in line:
+                try:
+                    price_match = line.split("$")[1].split()[0]
+                    template_vars['2'] = price_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "24h)" in line and "%" in line:
+                try:
+                    change_match = line.split("(")[1].split("%")[0]
+                    template_vars['3'] = change_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "OI:" in line and "$" in line:
+                try:
+                    oi_match = line.split("$")[1].split("M")[0]
+                    template_vars['4'] = oi_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "OI:" in line and "(" in line and "%" in line:
+                try:
+                    oi_change = line.split("(")[1].split("%")[0]
+                    template_vars['5'] = oi_change
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "Funding:" in line and "%" in line:
+                try:
+                    # Extract current funding rate
+                    funding_match = line.split(":")[1].split("%")[0].strip()
+                    template_vars['6'] = funding_match
+                    
+                    # Extract funding rate change (6h Δ)
+                    if "6h Δ" in line:
+                        change_match = line.split("6h Δ")[1].split("%")[0].strip()
+                        template_vars['7'] = change_match
+                    elif "Δ" in line:
+                        # Alternative format: (6h Δ +0.012%)
+                        change_match = line.split("Δ")[1].split("%")[0].strip()
+                        template_vars['7'] = change_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "L/S:" in line:
+                try:
+                    ls_match = line.split("L/S:")[1].split()[0]
+                    template_vars['8'] = ls_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "SIGNAL:" in line:
+                try:
+                    signal_match = line.split("SIGNAL:")[1].strip()
+                    template_vars['9'] = signal_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "CORRELATION:" in line:
+                try:
+                    corr_match = line.split("CORRELATION:")[1].strip()
+                    template_vars['10'] = corr_match
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "SETUP:" in line:
+                try:
+                    setup_match = line.split("SETUP:")[1].strip()
+                    template_vars['10'] = setup_match  # Use SETUP as correlation
+                except (IndexError, ValueError):
+                    pass
+                    
+            # Extract auto signal from features if available
+            if "Auto Signal:" in line:
+                try:
+                    auto_signal = line.split("Auto Signal:")[1].strip()
+                    if auto_signal in ["LONG", "SHORT", "WAIT"]:
+                        template_vars['9'] = auto_signal
+                except (IndexError, ValueError):
+                    pass
+                    
+            # Extract confidence for positioning decision
+            if "Confidence:" in line:
+                try:
+                    confidence = line.split("Confidence:")[1].split("/")[0].strip()
+                    conf_num = int(confidence)
+                    if conf_num >= 70:
+                        template_vars['11'] = "High confidence setup"
+                        template_vars['12'] = "Prepare entry zones"
+                    elif conf_num >= 50:
+                        template_vars['11'] = "Medium confidence"
+                        template_vars['12'] = "Monitor for confirmation"
+                    else:
+                        template_vars['11'] = "Low confidence"
+                        template_vars['12'] = "Wait for better setup"
+                except (IndexError, ValueError):
+                    pass
         
-        if price_info:
-            summary_lines.append(f"💰 SOL Price: ${price_info}")
+        # Create the template message
+        template_message = (
+            f"🎯 SOL • {template_vars['1']} UTC\n"
+            f"📊 ${template_vars['2']} ({template_vars['3']}% 24h) | OI: ${template_vars['4']}M ({template_vars['5']}%)\n"
+            f"💸 {template_vars['6']}% → {template_vars['7']}% | L/S: {template_vars['8']}\n\n"
+            f"🚨 SIGNAL: {template_vars['9']}\n"
+            f"📊 CORRELATION: {template_vars['10']}\n"
+            f"⚠️ POSITIONED: {template_vars['11']}\n"
+            f"💡 PREPARE: {template_vars['12']}\n\n"
+            f"📈 24h evolution • o3"
+        )
         
-        # Extract trading recommendation
-        recommendation = "NEUTRAL"
-        for line in lines:
-            if "Direction:" in line or "Directional Bias:" in line:
-                if "LONG" in line.upper():
-                    recommendation = "🟢 LONG"
-                elif "SHORT" in line.upper():
-                    recommendation = "🔴 SHORT"
-                break
-        
-        summary_lines.append(f"📊 Recommendation: {recommendation}")
-        
-        # Extract key levels
-        support_level = "N/A"
-        resistance_level = "N/A"
-        
-        for line in lines:
-            if "S1" in line and "$" in line:
-                support_level = line.split("$")[-1].split()[0]
-            if "R1" in line and "$" in line:
-                resistance_level = line.split("$")[-1].split()[0]
-        
-        summary_lines.append(f"📈 Resistance: ${resistance_level}")
-        summary_lines.append(f"📉 Support: ${support_level}")
-        
-        # Add model info
-        summary_lines.append(f"🤖 Model: {model_used}")
-        summary_lines.append(f"⏰ Time: {datetime.now().strftime('%H:%M')}")
-        
-        # Add disclaimer
-        summary_lines.append("")
-        summary_lines.append("⚠️ Educational purposes only")
-        summary_lines.append("📊 Full analysis available in repo")
-        
-        return "\n".join(summary_lines)
+        return template_message
 
 def send_analysis_to_whatsapp(analysis_file: str) -> bool:
     """Send analysis results to WhatsApp"""

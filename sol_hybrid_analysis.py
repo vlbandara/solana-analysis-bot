@@ -570,11 +570,21 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
         """Format the complete hybrid analysis result."""
         try:
             features = self._compute_features(derivatives_data)
-            header = (
-                f"🤖 Auto: {features['auto_signal']} | Confidence: {features['confidence']}/100\n"
+            
+            # Create a structured format that's easier to parse for WhatsApp template
+            structured_analysis = (
+                f"Price: ${derivatives_data['price']:.2f} ({derivatives_data['price_24h_change']:+.1f}% 24h)\n"
+                f"OI: ${derivatives_data['oi_usd']/1e6:.1f}M ({derivatives_data['oi_24h_change']:+.1f}%)\n"
+                f"Funding: {derivatives_data['funding_pct']:.3f}% (6h Δ {derivatives_data['funding_6h_change']:+.3f}%)\n"
+                f"L/S: {derivatives_data['ls_ratio']:.2f}\n"
+                f"Auto Signal: {features['auto_signal']}\n"
+                f"Confidence: {features['confidence']}/100\n"
+                f"Features: {features['summary']}\n\n"
+                f"{analysis}"
             )
-            # Keep concise for WhatsApp
-            return header + analysis
+            
+            return structured_analysis
+            
         except Exception:
             return analysis
 
@@ -622,7 +632,15 @@ def main():
             try:
                 from whatsapp_sender import WhatsAppSender
                 sender = WhatsAppSender()
-                if sender.send_message(result):
+                
+                # Create analysis data structure for WhatsApp sender
+                analysis_data = {
+                    'analysis': result,
+                    'model_used': 'Sonar Hybrid',
+                    'timestamp': datetime.now().strftime('%H:%M UTC')
+                }
+                
+                if sender.send_analysis_summary(analysis_data):
                     print("✅ WhatsApp message sent successfully!")
                 else:
                     print("❌ Failed to send WhatsApp message")
