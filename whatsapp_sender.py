@@ -107,6 +107,14 @@ class WhatsAppSender:
                 
                 # Always use template for WhatsApp business messages
                 import json as _json
+                
+                # Debug: Show exactly what template variables are being sent
+                print(f"🔍 DEBUG: Template variables being sent to Twilio:")
+                for key, value in template_vars.items():
+                    print(f"   {{{{{key}}}}} = {value}")
+                
+                print(f"🔍 DEBUG: JSON payload: {_json.dumps(template_vars or {})}")
+                
                 msg_obj = self.client.messages.create(
                     from_=from_param,
                     to=to_param,
@@ -369,7 +377,7 @@ class WhatsAppSender:
                 except (IndexError, ValueError):
                     pass
         
-        # Create the template message
+        # Create the template message using the EXACT approved format
         template_message = (
             f"🎯 SOL • {template_vars['1']} UTC\n"
             f"📊 ${template_vars['2']} ({template_vars['3']}% 24h) | OI: ${template_vars['4']}M ({template_vars['5']}%)\n"
