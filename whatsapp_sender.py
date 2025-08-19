@@ -243,6 +243,7 @@ class WhatsAppSender:
                 except (IndexError, ValueError):
                     pass
                     
+            # Extract SIGNAL from analysis
             if "SIGNAL:" in line:
                 try:
                     signal_match = line.split("SIGNAL:")[1].strip()
@@ -250,17 +251,14 @@ class WhatsAppSender:
                 except (IndexError, ValueError):
                     pass
                     
-            if "CORRELATION:" in line:
-                try:
-                    corr_match = line.split("CORRELATION:")[1].strip()
-                    template_vars['10'] = corr_match
-                except (IndexError, ValueError):
-                    pass
-                    
+            # Extract SETUP as CORRELATION (rich technical analysis)
             if "SETUP:" in line:
                 try:
                     setup_match = line.split("SETUP:")[1].strip()
-                    template_vars['10'] = setup_match  # Use SETUP as correlation
+                    # Truncate if too long for template
+                    if len(setup_match) > 200:
+                        setup_match = setup_match[:197] + "..."
+                    template_vars['10'] = setup_match
                 except (IndexError, ValueError):
                     pass
                     
@@ -287,6 +285,61 @@ class WhatsAppSender:
                     else:
                         template_vars['11'] = "Low confidence"
                         template_vars['12'] = "Wait for better setup"
+                except (IndexError, ValueError):
+                    pass
+                    
+            # Extract ENTRY, STOP, TARGET for PREPARE field
+            if "ENTRY:" in line:
+                try:
+                    entry_match = line.split("ENTRY:")[1].strip()
+                    if template_vars['12'] == "Prepare entry zones":
+                        template_vars['12'] = f"Entry: {entry_match}"
+                    elif template_vars['12'] == "Monitor for confirmation":
+                        template_vars['12'] = f"Monitor: {entry_match}"
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "STOP:" in line:
+                try:
+                    stop_match = line.split("STOP:")[1].strip()
+                    if "Entry:" in template_vars['12']:
+                        template_vars['12'] += f" | Stop: {stop_match}"
+                    elif "Monitor:" in template_vars['12']:
+                        template_vars['12'] += f" | Stop: {stop_match}"
+                    else:
+                        template_vars['12'] = f"Stop: {stop_match}"
+                except (IndexError, ValueError):
+                    pass
+                    
+            if "TARGET:" in line:
+                try:
+                    target_match = line.split("TARGET:")[1].strip()
+                    if "Entry:" in template_vars['12'] or "Monitor:" in template_vars['12']:
+                        template_vars['12'] += f" | Target: {target_match}"
+                    else:
+                        template_vars['12'] = f"Target: {target_match}"
+                except (IndexError, ValueError):
+                    pass
+                    
+            # Extract RISK for additional context in CORRELATION
+            if "RISK:" in line:
+                try:
+                    risk_match = line.split("RISK:")[1].strip()
+                    if template_vars['10'] and len(template_vars['10']) < 150:
+                        template_vars['10'] += f" | Risk: {risk_match[:50]}..."
+                    elif not template_vars['10']:
+                        template_vars['10'] = f"Risk: {risk_match[:100]}..."
+                except (IndexError, ValueError):
+                    pass
+                    
+            # Extract NEWS if available
+            if "NEWS:" in line:
+                try:
+                    news_match = line.split("NEWS:")[1].strip()
+                    if news_match != "None" and len(news_match) > 10:
+                        # Add news context to correlation if space allows
+                        if template_vars['10'] and len(template_vars['10']) < 100:
+                            template_vars['10'] += f" | News: {news_match[:50]}..."
                 except (IndexError, ValueError):
                     pass
         
