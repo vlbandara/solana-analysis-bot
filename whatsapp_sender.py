@@ -136,6 +136,32 @@ class WhatsAppSender:
                         print(f"   - Incorrect phone number format")
                         print(f"   - WhatsApp Business account setup issue")
                         print(f"   - Template variable mismatch")
+                        
+                        # Additional debugging for undelivered messages
+                        print(f"🔍 DEBUG: Phone number analysis:")
+                        print(f"   - Original: {recipient}")
+                        print(f"   - Cleaned: {clean_number}")
+                        print(f"   - Length: {len(clean_number)} digits")
+                        
+                        # Check if number looks like Sri Lankan format
+                        if clean_number.startswith('94') and len(clean_number) == 11:
+                            print(f"   - Format: Sri Lankan (+94) - {clean_number[:2]}-{clean_number[2:5]}-{clean_number[5:8]}-{clean_number[8:]}")
+                        elif clean_number.startswith('94') and len(clean_number) == 12:
+                            print(f"   - Format: Sri Lankan (+94) - {clean_number[:2]}-{clean_number[2:5]}-{clean_number[5:8]}-{clean_number[8:]}")
+                        else:
+                            print(f"   - Format: Unknown country code or length")
+                            
+                        print(f"🔍 DEBUG: Template validation:")
+                        print(f"   - Template SID: {template_sid}")
+                        print(f"   - Variables count: {len(template_vars)}")
+                        print(f"   - All variables filled: {'Yes' if all(v != '0.00' and v != '0.0' and v != '0.000' and v != 'WAIT' and v != 'Analysis unavailable' and v != 'No position' and v != 'Monitor price action' for v in template_vars.values()) else 'No'}")
+                        
+                        # Suggest next steps
+                        print(f"💡 Next steps to try:")
+                        print(f"   1. Verify {clean_number} is registered with WhatsApp")
+                        print(f"   2. Test with your own WhatsApp number first")
+                        print(f"   3. Check Twilio WhatsApp Business setup")
+                        print(f"   4. Verify template approval status in Twilio Console")
                     else:
                         print(f"⚠️ Message not delivered to {clean_number} (final status: {status}).")
                 except Exception as ex:
