@@ -1,100 +1,98 @@
-# WhatsApp Template Setup - QUICK SOLUTION for Error 63016
+# WhatsApp Template Setup Guide
 
-## 🎯 IMMEDIATE FIX: Simple Template Approach
+## 🚨 **IMPORTANT: Template Required for Business Messages**
 
-**Error 63016**: "Failed to send freeform message because you are outside the allowed window"
+WhatsApp requires using **Message Templates** for business-initiated messages. Freeform messages are only allowed within a 24-hour customer service window.
 
-**Solution**: Create a simple approved WhatsApp template (gets approved in minutes!)
-
-### ⚡ Quick Template (Recommended)
-
-Create this **simple template** in your **Twilio Console → Content Manager**:
-
-#### Template Name: `trading_update`
-
-#### Template Content:
-```
-Your trading update: {{1}}
-```
-
-#### Variable Mapping:
-- `{{1}}` = Complete SOL derivatives analysis message (our entire formatted message)
-
-### 🛠️ Setup Steps (5 minutes):
-
-#### 1. Create Simple Template in Twilio Console
-1. Go to **Twilio Console → Content Manager**
-2. Click **Create Template**
-3. Fill out the form:
-   - **Template Name**: `trading_update`
-   - **Category**: `UTILITY` (for financial/trading information)
-   - **Language**: `English`
-   - **Message Body**: `Your trading update: {{1}}`
-4. Click **Submit for Approval**
-5. ⚡ **Usually approved within 5-15 minutes** (simple templates are fast!)
-
-#### 2. Get Template Content SID
-After approval (check status in Content Manager):
-1. Click on your approved template
-2. Copy the **Content SID** (starts with `HX...`)
-
-#### 3. Set GitHub Secrets
-Add this secret to your repository settings:
+## 📋 **Required Environment Variable**
 
 ```bash
-TWILIO_WHATSAPP_TEMPLATE_SID=HXxxxxxxxxxxxxxxxxxxxxx
+TWILIO_TEMPLATE_SID=your_template_sid_here
 ```
 
-**Remove this if set:**
+## 🔧 **How to Create a Template in Twilio**
+
+### Step 1: Access Twilio Console
+1. Go to [Twilio Console](https://console.twilio.com/)
+2. Navigate to **Messaging** → **Templates** → **WhatsApp Templates**
+
+### Step 2: Create New Template
+1. Click **Create Template**
+2. Select **WhatsApp** as platform
+3. Choose **Business-Initiated** message type
+
+### Step 3: Template Content
+Use this exact template structure:
+
+```
+🎯 SOL • {{1}} UTC
+📊 ${{2}} ({{3}}% 24h) | OI: ${{4}}M ({{5}}%)
+💸 {{6}}% → {{7}}% | L/S: {{8}}
+
+🚨 SIGNAL: {{9}}
+📊 CORRELATION: {{10}}
+⚠️ POSITIONED: {{11}}
+💡 PREPARE: {{12}}
+
+📈 24h evolution • o3
+```
+
+### Step 4: Template Variables
+Add these 12 variables:
+- `{{1}}` - Time (UTC)
+- `{{2}}` - Price
+- `{{3}}` - 24h Change %
+- `{{4}}` - OI (Millions)
+- `{{5}}` - OI Change %
+- `{{6}}` - Funding Rate %
+- `{{7}}` - Funding Change %
+- `{{8}}` - L/S Ratio
+- `{{9}}` - Signal
+- `{{10}}` - Correlation
+- `{{11}}` - Positioned
+- `{{12}}` - Prepare
+
+### Step 5: Submit for Approval
+1. Submit template for WhatsApp approval
+2. Wait for approval (usually 24-48 hours)
+3. Copy the **Template SID** once approved
+
+## 🔑 **Set Environment Variable**
+
 ```bash
-TWILIO_USE_TEMPLATE=false  # Remove this line or set to true
+# Add to your .env file
+TWILIO_TEMPLATE_SID=HX1234567890abcdef1234567890abcdef
+
+# Or set in GitHub Secrets for Actions
+TWILIO_TEMPLATE_SID: HX1234567890abcdef1234567890abcdef
 ```
 
-### 🔄 Fallback Mode
+## ✅ **Verification**
 
-If no template is configured, the system will:
-1. Try to send as regular WhatsApp message
-2. Work within 24-hour session window
-3. Show helpful error messages if template is needed
+Once set up, your workflow will:
+1. ✅ Use approved template format
+2. ✅ Send business-initiated messages
+3. ✅ Avoid "outside allowed window" errors
+4. ✅ Deliver messages successfully
 
-### 🧪 Testing Your Template
+## 🆘 **Troubleshooting**
 
-Test your template setup:
-```bash
-# Run WhatsApp template test
-python enhanced_solana_workflow.py --test-whatsapp
+- **Error 63016**: Template SID not configured
+- **Undelivered messages**: Check template approval status
+- **Missing variables**: Ensure all 12 variables are defined in template
+
+## 📱 **Template Preview**
+
+Your messages will look exactly like this:
 ```
+🎯 SOL • 08:40 UTC
+📊 $98.45 (+2.3% 24h) | OI: $156.7M (+1.8%)
+💸 0.045% → +0.012% | L/S: 2.34
 
-### ✅ Why This Simple Template Works
+🚨 SIGNAL: LONG
+📊 CORRELATION: Price above key resistance with OI support
+⚠️ POSITIONED: High confidence setup
+💡 PREPARE: Prepare entry zones
 
-✅ **Fast Approval**: Simple templates approved in 5-15 minutes  
-✅ **Reliable Delivery**: Works 24/7 outside session windows  
-✅ **No Variable Limits**: Single variable can contain entire message  
-✅ **UTILITY Category**: Perfect for financial/trading alerts  
-✅ **Compliance**: Meets WhatsApp Business API requirements  
-
-### 🎯 Template Approval Tips
-
-**✅ DO:**
-- Keep templates simple and clear
-- Use "UTILITY" category for trading/financial updates
-- Include context like "Your trading update"
-- Submit during business hours for faster review
-
-**❌ DON'T:**
-- Use complex multi-variable templates (slower approval)
-- Put variables at the start or end of messages
-- Use gambling/promotional language
-- Submit duplicate templates
-
-### ⚠️ Error 63016 Troubleshooting
-
-If you still get error 63016:
-1. ✅ **Template approved?** Check Content Manager status
-2. ✅ **Correct Content SID?** Must start with `HX...`
-3. ✅ **GitHub Secret set?** `TWILIO_WHATSAPP_TEMPLATE_SID`
-4. ✅ **Template active?** Not paused or disabled
-
----
-
-**Need Help?** Check Twilio's [WhatsApp Template Documentation](https://www.twilio.com/docs/whatsapp/tutorial/send-whatsapp-notification-messages-templates)
+📈 24h evolution • o3
+```

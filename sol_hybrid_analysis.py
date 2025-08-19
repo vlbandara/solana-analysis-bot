@@ -644,8 +644,16 @@ def main():
                     print("✅ WhatsApp message sent successfully!")
                 else:
                     print("❌ Failed to send WhatsApp message")
+                    print("\n💡 WhatsApp Template Setup Required:")
+                    print("   - Set TWILIO_TEMPLATE_SID in GitHub Secrets")
+                    print("   - Create approved WhatsApp template in Twilio Console")
+                    print("   - See WHATSAPP_TEMPLATE_SETUP.md for detailed instructions")
             except Exception as whatsapp_error:
                 print(f"❌ WhatsApp sending failed: {whatsapp_error}")
+                print("\n💡 WhatsApp Template Setup Required:")
+                print("   - Set TWILIO_TEMPLATE_SID in GitHub Secrets")
+                print("   - Create approved WhatsApp template in Twilio Console")
+                print("   - See WHATSAPP_TEMPLATE_SETUP.md for detailed instructions")
         else:
             print("\n📱 WhatsApp sending disabled (AUTO_SEND_TO_WHATSAPP=false)")
             

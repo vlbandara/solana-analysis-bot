@@ -81,26 +81,29 @@ class WhatsAppSender:
         from_param = f'whatsapp:{self.from_number}'
         template_sid = os.getenv('TWILIO_TEMPLATE_SID')
 
+        # For WhatsApp, we must use a template for business-initiated messages
+        if not template_sid:
+            print("❌ TWILIO_TEMPLATE_SID is required for WhatsApp business messages")
+            print("💡 Please set TWILIO_TEMPLATE_SID in your environment variables")
+            print("💡 You can create a template in Twilio Console or use the default one")
+            return False
+
         any_success = False
         for recipient in recipients:
             try:
                 to_param = f'whatsapp:{recipient}'
                 print(f"🔍 DEBUG: From: {from_param} -> To: {to_param}")
-                if template_sid:
-                    import json as _json
-                    print(f"🔍 DEBUG: Using template SID {template_sid}")
-                    msg_obj = self.client.messages.create(
-                        from_=from_param,
-                        to=to_param,
-                        content_sid=template_sid,
-                        content_variables=_json.dumps(template_vars or {})
-                    )
-                else:
-                    msg_obj = self.client.messages.create(
-                        from_=from_param,
-                        body=message,
-                        to=to_param
-                    )
+                print(f"🔍 DEBUG: Using template SID {template_sid}")
+                
+                # Always use template for WhatsApp business messages
+                import json as _json
+                msg_obj = self.client.messages.create(
+                    from_=from_param,
+                    to=to_param,
+                    content_sid=template_sid,
+                    content_variables=_json.dumps(template_vars or {})
+                )
+                
                 print(f"✅ Twilio accepted message: {msg_obj.sid}. Checking delivery status …")
                 try:
                     # poll up to ~20 s for delivered/failed
@@ -136,17 +139,18 @@ class WhatsAppSender:
             timestamp = analysis_data.get('timestamp', '')
             analysis = analysis_data.get('analysis', '')
             
-            # Create WhatsApp-friendly summary
-            summary = self._create_whatsapp_summary(analysis, model_used, timestamp)
+            # Create WhatsApp-friendly summary and extract template variables
+            summary, template_vars = self._create_whatsapp_summary(analysis, model_used, timestamp)
             
-            return self.send_message(summary)
+            # Send using template variables
+            return self.send_message(summary, template_vars)
             
         except Exception as e:
             print(f"❌ Error creating WhatsApp summary: {e}")
             return False
     
-    def _create_whatsapp_summary(self, analysis: str, model_used: str, timestamp: str) -> str:
-        """Create a WhatsApp message using the approved template format"""
+    def _create_whatsapp_summary(self, analysis: str, model_used: str, timestamp: str) -> tuple[str, dict]:
+        """Create a WhatsApp message using the approved template format and return template variables"""
         
         # Extract key information from the analysis
         lines = analysis.split('\n')
@@ -280,7 +284,7 @@ class WhatsAppSender:
             f"📈 24h evolution • o3"
         )
         
-        return template_message
+        return template_message, template_vars
 
 def send_analysis_to_whatsapp(analysis_file: str) -> bool:
     """Send analysis results to WhatsApp"""
