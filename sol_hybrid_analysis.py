@@ -649,6 +649,26 @@ def main():
                     'timestamp': datetime.now().strftime('%H:%M UTC')
                 }
                 
+                # Test template variable extraction first
+                print("🔍 Testing template variable extraction...")
+                try:
+                    test_message, test_vars = sender._create_whatsapp_summary(
+                        result, 'Sonar Hybrid', datetime.now().strftime('%H:%M UTC')
+                    )
+                    print(f"✅ Template variables extracted: {len(test_vars)} variables")
+                    print(f"✅ Template message length: {len(test_message)} characters")
+                    
+                    # Show key variables
+                    print("🔍 Key template variables:")
+                    print(f"   Signal: {test_vars.get('9', 'N/A')}")
+                    print(f"   Price: {test_vars.get('2', 'N/A')}")
+                    print(f"   OI: {test_vars.get('4', 'N/A')}")
+                    print(f"   Funding: {test_vars.get('6', 'N/A')}")
+                    
+                except Exception as template_error:
+                    print(f"❌ Template variable extraction failed: {template_error}")
+                
+                # Now send the actual message
                 if sender.send_analysis_summary(analysis_data):
                     print("✅ WhatsApp message sent successfully!")
                 else:

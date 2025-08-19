@@ -186,8 +186,8 @@ class WhatsAppSender:
             # Create WhatsApp-friendly summary and extract template variables
             summary, template_vars = self._create_whatsapp_summary(analysis, model_used, timestamp)
             
-            # Send using template variables
-            return self.send_message(summary, template_vars)
+            # Send using template variables (empty message since template handles content)
+            return self.send_message("", template_vars)
             
         except Exception as e:
             print(f"❌ Error creating WhatsApp summary: {e}")
