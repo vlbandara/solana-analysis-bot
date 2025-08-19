@@ -629,6 +629,15 @@ def main():
         auto_send = os.getenv("AUTO_SEND_TO_WHATSAPP", "false").lower() == "true"
         if auto_send:
             print("\n📱 Sending analysis to WhatsApp...")
+            
+            # Debug: Check if template SID is set
+            template_sid = os.getenv("TWILIO_TEMPLATE_SID")
+            if template_sid:
+                print(f"✅ Template SID found: {template_sid[:10]}...")
+            else:
+                print("❌ TWILIO_TEMPLATE_SID not found in environment")
+                print("💡 Make sure it's set in GitHub Secrets and workflow")
+            
             try:
                 from whatsapp_sender import WhatsAppSender
                 sender = WhatsAppSender()
