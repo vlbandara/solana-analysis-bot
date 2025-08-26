@@ -326,7 +326,7 @@ class WhatsAppSender:
                     if attempt == max_retries - 1:
                         return False
                     continue
-                
+            
             # Create WhatsApp-friendly summary and extract template variables
             summary, template_vars = self._create_whatsapp_summary(analysis, model_used, timestamp)
             
@@ -339,7 +339,7 @@ class WhatsAppSender:
                     import time
                     time.sleep(retry_delay)
                     continue
-                
+            
             # Send using template variables (empty message since template handles content)
                 success = self.send_message("", template_vars)
                 
