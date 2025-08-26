@@ -620,75 +620,170 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
 
 
 def main():
-    """Run the hybrid analysis and send WhatsApp message."""
+    """Run the hybrid analysis and send WhatsApp message with comprehensive error handling."""
+    print("🚀 Starting SOL Hybrid Analysis with robust error handling...")
+    
+    # ROBUST ERROR HANDLING: Environment validation
+    required_env_vars = ['COINALYZE_API_KEY', 'OPENAI_API_KEY']
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"❌ Missing required environment variables: {missing_vars}")
+        print("💡 Please set these variables in your environment or .env file")
+        return False
+    
     try:
+        # ROBUST INITIALIZATION: Create analyzer with validation
+        print("🔧 Initializing SOL Hybrid Analysis...")
         analyzer = SOLHybridAnalysis()
+        
+        # ROBUST ANALYSIS: Run with comprehensive error handling
+        print("📈 Running hybrid analysis...")
         result = analyzer.run_hybrid_analysis()
         
-        # Send to WhatsApp if enabled
+        if not result or len(result.strip()) < 50:
+            print("⚠️  Analysis result seems incomplete or empty")
+            print(f"Result length: {len(result) if result else 0} characters")
+            return False
+        
+        print(f"✅ Analysis completed successfully ({len(result)} characters)")
+        
+        # ROBUST WHATSAPP HANDLING: Check if WhatsApp sending is enabled
         auto_send = os.getenv("AUTO_SEND_TO_WHATSAPP", "false").lower() == "true"
         if auto_send:
-            print("\n📱 Sending analysis to WhatsApp...")
-            
-            # Debug: Check if template SID is set
-            template_sid = os.getenv("TWILIO_TEMPLATE_SID")
-            if template_sid:
-                print(f"✅ Template SID found: {template_sid[:10]}...")
-            else:
-                print("❌ TWILIO_TEMPLATE_SID not found in environment")
-                print("💡 Make sure it's set in GitHub Secrets and workflow")
-            
-            try:
-                from whatsapp_sender import WhatsAppSender
-                sender = WhatsAppSender()
-                
-                # Create analysis data structure for WhatsApp sender
-                analysis_data = {
-                    'analysis': result,
-                    'model_used': 'Sonar Hybrid',
-                    'timestamp': datetime.now().strftime('%H:%M UTC')
-                }
-                
-                # Test template variable extraction first
-                print("🔍 Testing template variable extraction...")
-                try:
-                    test_message, test_vars = sender._create_whatsapp_summary(
-                        result, 'Sonar Hybrid', datetime.now().strftime('%H:%M UTC')
-                    )
-                    print(f"✅ Template variables extracted: {len(test_vars)} variables")
-                    print(f"✅ Template message length: {len(test_message)} characters")
-                    
-                    # Show key variables
-                    print("🔍 Key template variables:")
-                    print(f"   Signal: {test_vars.get('9', 'N/A')}")
-                    print(f"   Price: {test_vars.get('2', 'N/A')}")
-                    print(f"   OI: {test_vars.get('4', 'N/A')}")
-                    print(f"   Funding: {test_vars.get('6', 'N/A')}")
-                    
-                except Exception as template_error:
-                    print(f"❌ Template variable extraction failed: {template_error}")
-                
-                # Now send the actual message
-                if sender.send_analysis_summary(analysis_data):
-                    print("✅ WhatsApp message sent successfully!")
-                else:
-                    print("❌ Failed to send WhatsApp message")
-                    print("\n💡 WhatsApp Template Setup Required:")
-                    print("   - Set TWILIO_TEMPLATE_SID in GitHub Secrets")
-                    print("   - Create approved WhatsApp template in Twilio Console")
-                    print("   - See WHATSAPP_TEMPLATE_SETUP.md for detailed instructions")
-            except Exception as whatsapp_error:
-                print(f"❌ WhatsApp sending failed: {whatsapp_error}")
-                print("\n💡 WhatsApp Template Setup Required:")
-                print("   - Set TWILIO_TEMPLATE_SID in GitHub Secrets")
-                print("   - Create approved WhatsApp template in Twilio Console")
-                print("   - See WHATSAPP_TEMPLATE_SETUP.md for detailed instructions")
+            return _send_whatsapp_with_robust_handling(result)
         else:
             print("\n📱 WhatsApp sending disabled (AUTO_SEND_TO_WHATSAPP=false)")
+            print("💡 Set AUTO_SEND_TO_WHATSAPP=true to enable automatic sending")
+            return True
             
     except Exception as e:
-        print(f"❌ Failed to run hybrid analysis: {e}")
+        print(f"❌ Critical error in main analysis: {e}")
+        print(f"💡 Error type: {type(e).__name__}")
+        import traceback
+        print(f"💡 Traceback: {traceback.format_exc()}")
+        return False
+
+
+def _send_whatsapp_with_robust_handling(result: str) -> bool:
+    """Handle WhatsApp sending with comprehensive error handling and validation."""
+    print("\n📱 Starting robust WhatsApp sending process...")
+    
+    # ROBUST VALIDATION: Check WhatsApp environment
+    whatsapp_env_vars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM', 'TWILIO_TEMPLATE_SID']
+    missing_whatsapp_vars = [var for var in whatsapp_env_vars if not os.getenv(var)]
+    
+    if missing_whatsapp_vars:
+        print(f"❌ Missing WhatsApp environment variables: {missing_whatsapp_vars}")
+        print("\n💡 WhatsApp Setup Required:")
+        for var in missing_whatsapp_vars:
+            print(f"   - Set {var} in GitHub Secrets")
+        print("   - See WHATSAPP_TEMPLATE_SETUP.md for detailed instructions")
+        return False
+    
+    # ROBUST VALIDATION: Check recipients
+    recipients = os.getenv('WHATSAPP_TO_NUMBERS') or os.getenv('WHATSAPP_TO_NUMBER')
+    if not recipients:
+        print("❌ No WhatsApp recipients configured")
+        print("💡 Set WHATSAPP_TO_NUMBERS or WHATSAPP_TO_NUMBER environment variable")
+        return False
+    
+    # Debug: Show configuration status
+    template_sid = os.getenv("TWILIO_TEMPLATE_SID")
+    print(f"✅ Template SID configured: {template_sid[:10]}...{template_sid[-10:]}")
+    print(f"✅ Recipients configured: {len(recipients.split(','))} numbers")
+    
+    try:
+        # ROBUST IMPORT: Import WhatsApp sender with error handling
+        try:
+            from whatsapp_sender import WhatsAppSender
+        except ImportError as import_error:
+            print(f"❌ Failed to import WhatsAppSender: {import_error}")
+            print("💡 Check if Twilio library is installed: pip install twilio")
+            return False
+        
+        # ROBUST INITIALIZATION: Create sender with validation
+        print("🔧 Initializing WhatsApp sender...")
+        sender = WhatsAppSender()
+        
+        if not sender.client:
+            print("❌ WhatsApp sender initialization failed")
+            return False
+        
+        # ROBUST DATA PREPARATION: Create analysis data structure
+        analysis_data = {
+            'analysis': result,
+            'model_used': 'Sonar Hybrid (Robust)',
+            'timestamp': datetime.now().strftime('%H:%M UTC')
+        }
+        
+        # ROBUST TESTING: Pre-validate template extraction
+        print("💬 Pre-validating template variable extraction...")
+        try:
+            test_message, test_vars = sender._create_whatsapp_summary(
+                result, 'Sonar Hybrid', datetime.now().strftime('%H:%M UTC')
+            )
+            
+            # Validate template variables
+            if not sender._validate_template_vars(test_vars):
+                print("❌ Template variable pre-validation failed")
+                return False
+            
+            print(f"✅ Template pre-validation successful")
+            print(f"   - Variables extracted: {len(test_vars)}")
+            print(f"   - Message length: {len(test_message)} characters")
+            
+            # Show key variables for debugging
+            key_vars = ['2', '3', '4', '9', '10']
+            print("🔍 Key extracted variables:")
+            for var in key_vars:
+                value = test_vars.get(var, 'N/A')
+                display_value = value[:30] + '...' if len(str(value)) > 30 else value
+                print(f"   {var}: {display_value}")
+            
+        except Exception as template_error:
+            print(f"❌ Template variable pre-validation failed: {template_error}")
+            print("💡 Analysis format may be incompatible with template extraction")
+            return False
+        
+        # ROBUST SENDING: Send with comprehensive error handling
+        print("🚀 Sending WhatsApp message with robust error handling...")
+        success = sender.send_analysis_summary(analysis_data)
+        
+        if success:
+            print("✅ WhatsApp message sent successfully with robust handling!")
+            print("🎉 All systems operational - message delivered")
+            return True
+        else:
+            print("❌ WhatsApp message sending failed despite robust handling")
+            print("\n💡 Final troubleshooting steps:")
+            print("   1. Verify template approval status in Twilio Console")
+            print("   2. Test with your own WhatsApp number first")
+            print("   3. Check phone number format (+country_code)")
+            print("   4. Ensure template variables match exactly")
+            print("   5. See WHATSAPP_DELIVERY_TROUBLESHOOTING.md")
+            return False
+            
+    except Exception as whatsapp_error:
+        print(f"❌ Unexpected WhatsApp error: {whatsapp_error}")
+        print(f"💡 Error type: {type(whatsapp_error).__name__}")
+        import traceback
+        print(f"💡 Full traceback: {traceback.format_exc()}")
+        return False
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        success = main()
+        if success:
+            print("\n🎉 SOL Hybrid Analysis completed successfully!")
+            exit(0)
+        else:
+            print("\n❌ SOL Hybrid Analysis failed")
+            exit(1)
+    except KeyboardInterrupt:
+        print("\n⏹️  Analysis interrupted by user")
+        exit(130)
+    except Exception as e:
+        print(f"\n💥 Unexpected error: {e}")
+        exit(1)

@@ -1,0 +1,31 @@
+# Weekly Crypto Probability Analysis: August 11-17, 2025
+
+*(Note: This structured markdown content is designed for direct copy-paste into a Microsoft Word document. Use Word's "Insert Table" or convert markdown tables via online tools if needed. Headers can be formatted as bold/centered, and tables as standard Word tables. This report has been updated to account for the sudden BTC pump to $121,600 on Monday morning, August 11, likely driven by positive CPI data or market anticipation, shifting probabilities toward more bullish outcomes. ETH and SOL prices have been adjusted proportionally to ~$3,900 and ~$195, respectively.)*
+
+## Executive Summary
+
+Following a sudden pump in BTC to $121,600 on Monday morning (August 11), the week's outlook has turned more bullish for Bitcoin (BTC), Ethereum (ETH), and Solana (SOL), with a 75% combined probability of upside or neutral scenarios. This surge aligns with dovish Fed expectations (78% chance of September rate cut), strong ETF inflows, and potentially favorable CPI data. Key risks remain, such as unemployment spikes or China data weakness, but the pump reduces downside odds. Expected end-of-week prices (from current levels): BTC ~$124,500 (+2.4% from $121,600), ETH ~$4,010 (+2.8% from $3,900), SOL ~$202 (+3.6% from $195). Traders should monitor US unemployment (Aug 15) and China data, maintaining positions with tightened stop-losses amid increased volatility.
+
+## Individual Events Table
+
+| Event | Date | Probability | Impact on Crypto (BTC/ETH/SOL) |
+|-------|------|-------------|--------------------------------|
+| US CPI Release | Aug 11 | Lower than forecast: 80% (updated post-pump); At forecast: 15%; Higher: 5% | Low: +2-3% boost (dovish, as seen in morning pump); High: -2% pressure (hawkish) |
+| Fed Speeches (Barkin/Schmid/Goolsbee/Bostic) | Aug 11-13 | Dovish: 70% (up from 60% post-pump); Neutral/Hawkish: 30% | Dovish: +1-2% (rate cut hints); Hawkish: -1% |
+| China Economic Data (Industrial Production, Retail Sales) | Aug 15 | Positive: 70%; Mixed/Negative: 30% | Positive: +1% (global risk-on); Negative: -0.5-1% |
+| US Unemployment Data | Aug 15 | >4.3%: 35%; At/Below: 65% | High: +1% (dovish Fed); Low: Neutral |
+| UK GDP Release | Aug 14 | Beats forecast: 70%; Meets/Misses: 30% | Beat: +0.5-1% (stability); Miss: -0.5% |
+| Stablecoin Legislation Passage | Ongoing (Aug-Sep) | 65% | Positive: +1-2% (regulatory clarity) |
+| ETF Inflows (Weekly Net) | Ongoing | Strong (> $200M): 85% (up post-pump); Weak: 15% | Strong: +1-3% (institutional demand) |
+| September Rate Cut (25bp) | Implied (FOMC Sep 16-17) | 78% | Positive: +2-4% overall (liquidity boost) |
+
+## Chained Scenarios Table
+
+| Scenario | Probability | Event Chain Description | Day-by-Day Price Fluctuations (BTC/ETH/SOL) |
+|----------|-------------|--------------------------------|---------------------------------------------|
+| 1. Dovish Data Rally (Bullish Chain) | 37% | Mon (Aug 11): Low CPI confirmed with pump. Tue (12): China PMI positive (70%), ETF inflows surge. Wed (13): Stable macro. Thu (14): UK GDP beats (70%). Fri (15): Unemployment low (65%), dovish Fed implied (78% cut odds up). Weekend: Crypto fundamentals strong (85%). Chain: Low inflation → global stability → risk-on. | Mon: +1% (BTC $122,816; ETH $3,939; SOL $197) post-pump adjustment. Tue: +1.5% ($124,658; $3,998; $200). Wed: Flat ($124,658; $3,998; $200). Thu: +1% ($125,905; $4,038; $202). Fri: +2% ($128,423; $4,119; $206). Sat/Sun: +0.5% ($129,065; $4,139; $207). EOW: +6%. |
+| 2. Mild Bull with Macro Dip (Neutral-Bull) | 18% | Mon: Low CPI (post-pump). Tue: China PMI positive. Wed: Neutral. Thu: UK GDP meets. Fri: Unemployment at forecast (30%), slight hawkish tilt (30%). Weekend: ETF recovery. Chain: Early boost → mid-week stall → late recovery. | Mon: +0.5% ($122,208; $3,920; $196). Tue: +1% ($123,430; $3,959; $198). Wed: -0.5% ($122,813; $3,939; $197). Thu: Flat ($122,813; $3,939; $197). Fri: +1% ($124,041; $3,978; $199). Sat/Sun: +0.5% ($124,661; $3,998; $200). EOW: +3%. |
+| 3. Inflation Neutral, Crypto Buffer (Neutral) | 18% | Mon: CPI at forecast (but pump suggests positive bias). Tue: China data mixed (30%). Wed: Stable. Thu: UK GDP positive. Fri: Unemployment low, but no Fed catalyst. Weekend: Strong SOL/ETH metrics (85%). Chain: No big macro surprise → crypto internals drive. | Mon: +0.5% ($122,208; $3,920; $196). Tue: +0.5% ($122,818; $3,939; $197). Wed: Flat ($122,818; $3,939; $197). Thu: +1% ($124,046; $3,979; $199). Fri: +0.5% ($124,666; $3,999; $200). Sat/Sun: +0.5% ($125,290; $4,019; $201). EOW: +3%. |
+| 4. Hawkish Surprise Correction (Bearish) | 3% | Mon: Higher CPI (low prob post-pump). Tue: China weak (30%). Wed: Risk-off. Thu: UK GDP misses (30%). Fri: Unemployment >4.3% (35%), but hawkish reaction (30%). Weekend: Outflows. Chain: High inflation → escalation fears → sell-off. | Mon: -1% ($120,384; $3,861; $193). Tue: -1% ($119,180; $3,822; $191). Wed: -1.5% ($117,393; $3,765; $188). Thu: -0.5% ($116,806; $3,746; $187). Fri: -1% ($115,638; $3,709; $185). Sat/Sun: Flat ($115,638; $3,709; $185). EOW: -5%. |
+| 5. Early Rally, Late Recovery (Volatile Bull) | 12% | Mon: Low CPI (post-pump). Tue: China positive. Wed: Dip on neutral news. Thu: UK GDP beats. Fri: Unemployment low, rally. Weekend: Fundamentals. Chain: Boost → brief dip → strong close. | Mon: +1% ($122,816; $3,939; $197). Tue: +1.5% ($124,658; $3,998; $200). Wed: -1% ($123,411; $3,958; $198). Thu: +1.5% ($125,262; $4,017; $201). Fri: +1% ($126,515; $4,057; $203). Sat/Sun: +0.5% ($127,147; $4,078; $204). EOW: +4.5%. |
+| 6. Bearish Macro Chain (Neutral-Bear) | 12% | Mon: CPI at/high (despite pump). Tue: China weak. Wed: Stable. Thu: UK GDP meets. Fri: Unemployment high, pressure. Weekend: Mild recovery. Chain: Weak data → dip → partial rebound. | Mon: -0.5% ($120,992; $3,881; $194). Tue: -0.5% ($120,387; $3,861; $193). Wed: Flat ($120,387; $3,861; $193). Thu: +0.5% ($120,989; $3,880; $194). Fri: -1% ($119,779; $3,841; $192). Sat/Sun: +0.5% ($120,378; $3,861; $193). EOW: -1%.
