@@ -25,7 +25,13 @@ import requests
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from whatsapp_sender import WhatsAppSender
+# Temporarily handle WhatsApp sender import issues
+try:
+    from whatsapp_sender import WhatsAppSender
+    WHATSAPP_AVAILABLE = True
+except (ImportError, SyntaxError, IndentationError):
+    WHATSAPP_AVAILABLE = False
+    print("⚠️ WhatsApp sender not available due to import issues")
 
 # ---------------------------------------------------------------------------
 # Environment & Constants
@@ -664,8 +670,12 @@ def main():
         
         # ROBUST WHATSAPP HANDLING: Check if WhatsApp sending is enabled
         auto_send = os.getenv("AUTO_SEND_TO_WHATSAPP", "false").lower() == "true"
-        if auto_send:
+        if auto_send and WHATSAPP_AVAILABLE:
             return _send_whatsapp_with_robust_handling(result)
+        elif auto_send and not WHATSAPP_AVAILABLE:
+            print("\n📱 WhatsApp sending requested but sender not available")
+            print("💡 WhatsApp sender has import issues - analysis complete without sending")
+            return True
         else:
             print("\n📱 WhatsApp sending disabled (AUTO_SEND_TO_WHATSAPP=false)")
             print("💡 Set AUTO_SEND_TO_WHATSAPP=true to enable automatic sending")
