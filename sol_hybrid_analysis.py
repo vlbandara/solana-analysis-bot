@@ -471,47 +471,47 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             f"Auto: {features['auto_signal']} | Confidence: {features['confidence']}/100\n"
         )
 
-                    # Enhanced prompt for hybrid analysis with better insights
-            prompt = (
-                f"{derivatives_summary}\n\n"
-                f"{features_block}\n"
-                f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
-                
-                "ENHANCED HYBRID ANALYSIS TASK:\n"
-                "1. TECHNICAL ANALYSIS (ACTIONABLE INSIGHTS):\n"
-                "   - Analyze SOL/USDT current price action and key levels\n"
-                "   - Identify IMMEDIATE support/resistance within 2-3% of current price\n"
-                "   - Find ORDER FLOW signals: volume spikes, rejection wicks, breakout patterns\n"
-                "   - Determine MARKET STRUCTURE: trending, ranging, or transitional\n"
-                "   - Focus on TRADEABLE setups for next 4-24 hours\n"
-                "   - Provide SPECIFIC price levels for entries, stops, targets\n\n"
-                
-                "2. DERIVATIVES INSIGHT:\n"
-                "   - Correlate funding rates with price momentum (funding stress = reversal risk)\n"
-                "   - Analyze OI changes: increasing OI + price up = strong trend, decreasing = weakness\n"
-                "   - Use L/S ratio for contrarian signals: extreme ratios often precede reversals\n"
-                "   - Identify FUNDING SQUEEZE potential or OI liquidation zones\n\n"
-                
-                "3. RISK ASSESSMENT:\n"
-                "   - Evaluate volatility based on recent price action\n"
-                "   - Identify key risk factors: funding stress, OI extremes, news events\n"
-                "   - Determine position sizing recommendation based on setup quality\n\n"
-                
-                "FOCUS: Actionable trading insights for SOL spot trading\n\n"
-                
-                "RESPONSE FORMAT (BE SPECIFIC AND ACTIONABLE):\n"
-                "🚨 SIGNAL: [LONG|SHORT|WAIT]\n"
-                "📊 SETUP: [Specific technical pattern + key levels]\n"
-                "🎯 ENTRY: [Exact entry price/zone]\n"
-                "⛔ STOP: [Specific stop loss level]\n"
-                "🎪 TARGET: [Primary target with reasoning]\n"
-                "⚠️ RISK: [Main risk factor + mitigation]\n"
-                "📈 TIMEFRAME: [Expected move duration]\n"
-                "💡 CONTEXT: [Market condition summary]"
-            )
+        # Enhanced prompt for hybrid analysis with better insights
+        prompt = (
+            f"{derivatives_summary}\n\n"
+            f"{features_block}\n"
+            f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
+            
+            "ENHANCED HYBRID ANALYSIS TASK:\n"
+            "1. TECHNICAL ANALYSIS (ACTIONABLE INSIGHTS):\n"
+            "   - Analyze SOL/USDT current price action and key levels\n"
+            "   - Identify IMMEDIATE support/resistance within 2-3% of current price\n"
+            "   - Find ORDER FLOW signals: volume spikes, rejection wicks, breakout patterns\n"
+            "   - Determine MARKET STRUCTURE: trending, ranging, or transitional\n"
+            "   - Focus on TRADEABLE setups for next 4-24 hours\n"
+            "   - Provide SPECIFIC price levels for entries, stops, targets\n\n"
+            
+            "2. DERIVATIVES INSIGHT:\n"
+            "   - Correlate funding rates with price momentum (funding stress = reversal risk)\n"
+            "   - Analyze OI changes: increasing OI + price up = strong trend, decreasing = weakness\n"
+            "   - Use L/S ratio for contrarian signals: extreme ratios often precede reversals\n"
+            "   - Identify FUNDING SQUEEZE potential or OI liquidation zones\n\n"
+            
+            "3. RISK ASSESSMENT:\n"
+            "   - Evaluate volatility based on recent price action\n"
+            "   - Identify key risk factors: funding stress, OI extremes, news events\n"
+            "   - Determine position sizing recommendation based on setup quality\n\n"
+            
+            "FOCUS: Actionable trading insights for SOL spot trading\n\n"
+            
+            "RESPONSE FORMAT (BE SPECIFIC AND ACTIONABLE):\n"
+            "🚨 SIGNAL: [LONG|SHORT|WAIT]\n"
+            "📊 SETUP: [Specific technical pattern + key levels]\n"
+            "🎯 ENTRY: [Exact entry price/zone]\n"
+            "⛔ STOP: [Specific stop loss level]\n"
+            "🎪 TARGET: [Primary target with reasoning]\n"
+            "⚠️ RISK: [Main risk factor + mitigation]\n"
+            "📈 TIMEFRAME: [Expected move duration]\n"
+            "💡 CONTEXT: [Market condition summary]"
+        )
 
-                    system_prompt = (
-                "You are an expert crypto analyst providing actionable SOL trading insights. "
+        system_prompt = (
+            "You are an expert crypto analyst providing actionable SOL trading insights. "
                 "CRITICAL REQUIREMENTS:\n"
                 "1. ACTIONABLE INSIGHTS: Provide specific, tradeable information\n"
                 "2. PRECISE LEVELS: Give exact entry, stop, and target prices\n"
