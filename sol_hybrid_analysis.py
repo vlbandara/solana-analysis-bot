@@ -471,59 +471,57 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
             f"Auto: {features['auto_signal']} | Confidence: {features['confidence']}/100\n"
         )
 
-        # Enhanced prompt for hybrid analysis
-        prompt = (
-            f"{derivatives_summary}\n\n"
-            f"{features_block}\n"
-            f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
-            
-            "HYBRID ANALYSIS TASK:\n"
-            "1. TECHNICAL ANALYSIS (CURRENT DATA ONLY):\n"
-            "   - Browse SOL/USDT 1h & 4h charts for CURRENT price levels\n"
-            "   - Find SUPPLY ZONES: Look for levels where price previously REJECTED DOWN with volume\n"
-            "   - Find DEMAND ZONES: Look for levels where price previously BOUNCED UP with volume\n"
-            "   - Identify ORDER BLOCKS: Large single candles that created strong moves\n"
-            "   - Find LIQUIDITY ZONES: Round numbers, previous highs/lows where stops cluster\n"
-            "   - Note current price relative to these REAL reaction zones\n"
-            "   - IGNORE patterns, triangles, flags, historical patterns - focus ONLY on current price action\n"
-            "   - CRITICAL: Do NOT reference previous analysis, historical context, or patterns from past data\n\n"
-            
-            f"2. FRESH NEWS (Last 60 minutes only; use CURRENT TIME above as reference):\n"
-            "   - Check CoinDesk, CryptoPanic, Decrypt\n"
-            "   - Only include items published within the last 60 minutes\n"
-            "   - Each item must include: [HH:MM UTC] – Title – Source (URL)\n"
-            "   - If no qualifying item exists, set NEWS: None\n\n"
-            
+                    # Enhanced prompt for hybrid analysis with better insights
+            prompt = (
+                f"{derivatives_summary}\n\n"
+                f"{features_block}\n"
+                f"CURRENT TIME: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n\n"
+                
+                "ENHANCED HYBRID ANALYSIS TASK:\n"
+                "1. TECHNICAL ANALYSIS (ACTIONABLE INSIGHTS):\n"
+                "   - Analyze SOL/USDT current price action and key levels\n"
+                "   - Identify IMMEDIATE support/resistance within 2-3% of current price\n"
+                "   - Find ORDER FLOW signals: volume spikes, rejection wicks, breakout patterns\n"
+                "   - Determine MARKET STRUCTURE: trending, ranging, or transitional\n"
+                "   - Focus on TRADEABLE setups for next 4-24 hours\n"
+                "   - Provide SPECIFIC price levels for entries, stops, targets\n\n"
+                
+                "2. DERIVATIVES INSIGHT:\n"
+                "   - Correlate funding rates with price momentum (funding stress = reversal risk)\n"
+                "   - Analyze OI changes: increasing OI + price up = strong trend, decreasing = weakness\n"
+                "   - Use L/S ratio for contrarian signals: extreme ratios often precede reversals\n"
+                "   - Identify FUNDING SQUEEZE potential or OI liquidation zones\n\n"
+                
+                "3. RISK ASSESSMENT:\n"
+                "   - Evaluate volatility based on recent price action\n"
+                "   - Identify key risk factors: funding stress, OI extremes, news events\n"
+                "   - Determine position sizing recommendation based on setup quality\n\n"
+                
+                "FOCUS: Actionable trading insights for SOL spot trading\n\n"
+                
+                "RESPONSE FORMAT (BE SPECIFIC AND ACTIONABLE):\n"
+                "🚨 SIGNAL: [LONG|SHORT|WAIT]\n"
+                "📊 SETUP: [Specific technical pattern + key levels]\n"
+                "🎯 ENTRY: [Exact entry price/zone]\n"
+                "⛔ STOP: [Specific stop loss level]\n"
+                "🎪 TARGET: [Primary target with reasoning]\n"
+                "⚠️ RISK: [Main risk factor + mitigation]\n"
+                "📈 TIMEFRAME: [Expected move duration]\n"
+                "💡 CONTEXT: [Market condition summary]"
+            )
 
-            
-            "3. DERIVATIVES CORRELATION:\n"
-            "   - Correlate the provided funding/OI/liquidation data with supply/demand zones\n"
-            "   - Identify squeeze setups, distribution patterns, or funding stress\n\n"
-            
-            "FOCUS: Quick SOL trading analysis for WhatsApp updates\n\n"
-            
-            "RESPONSE FORMAT:\n"
-            "🚨 SIGNAL: [LONG|SHORT|WAIT]\n"
-            "📊 SETUP: [Brief technical + derivatives correlation]\n"
-            "📰 NEWS: [[HH:MM UTC] – Title – Source (URL)] or 'None'\n"
-            "🎯 ENTRY: [Entry zone]\n"
-            "⛔ STOP: [Stop loss]\n"
-            "🎪 TARGET: [Target level]\n"
-            "⚠️ RISK: [Key risk]"
-        )
-
-        system_prompt = (
-            "You are a concise crypto analyst for WhatsApp updates. "
-            "CRITICAL RULES:\n"
-            "1. Only analyze CURRENT data provided\n"
-            "2. Do NOT reference previous analysis, yesterday's data, or historical patterns\n"
-            "3. Do NOT mention triangles, flags, or any chart patterns\n"
-            "4. Focus ONLY on current price action and derivatives correlation\n"
-            "5. Keep responses brief and actionable\n"
-            "6. Only include news from the last 60 minutes\n"
-            "7. For any news item, include timestamp (HH:MM UTC) and a source link; if none within 60 minutes, output 'None'\n"
-            "8. Base analysis ONLY on the derivatives data and current chart levels provided"
-        )
+                    system_prompt = (
+                "You are an expert crypto analyst providing actionable SOL trading insights. "
+                "CRITICAL REQUIREMENTS:\n"
+                "1. ACTIONABLE INSIGHTS: Provide specific, tradeable information\n"
+                "2. PRECISE LEVELS: Give exact entry, stop, and target prices\n"
+                "3. RISK CLARITY: Clearly state main risks and how to manage them\n"
+                "4. TIMEFRAME SPECIFIC: Indicate expected move duration (hours/days)\n"
+                "5. CONTEXT AWARE: Explain WHY the setup works based on derivatives data\n"
+                "6. NO VAGUE LANGUAGE: Avoid 'monitor', 'watch' - give specific actions\n"
+                "7. MARKET STRUCTURE: Identify if trending, ranging, or transitional\n"
+                "8. POSITION SIZING: Suggest appropriate risk level based on setup quality"
+            )
 
         print("🧠 Generating hybrid analysis with Sonar...")
         print("🔍 Technical analysis + fresh news + derivatives correlation...")
@@ -567,26 +565,42 @@ class SOLHybridAnalysis:  # pylint: disable=too-many-instance-attributes
     # Output Formatting
     # ---------------------------------------------------------------------
     def format_hybrid_result(self, derivatives_data: Snapshot, analysis: str) -> str:
-        """Format the complete hybrid analysis result."""
+        """Format the complete hybrid analysis result with enhanced insights."""
         try:
             features = self._compute_features(derivatives_data)
             
-            # Create a structured format that's easier to parse for WhatsApp template
+            # Enhanced market context
+            price_momentum = "bullish" if derivatives_data['price_24h_change'] > 1 else "bearish" if derivatives_data['price_24h_change'] < -1 else "neutral"
+            oi_trend = "expanding" if derivatives_data['oi_24h_change'] > 2 else "contracting" if derivatives_data['oi_24h_change'] < -2 else "stable"
+            funding_stress = "high" if abs(derivatives_data['funding_pct']) > 0.05 else "normal"
+            
+            # Create enhanced structured format for better WhatsApp parsing
             structured_analysis = (
+                f"MARKET DATA:\n"
                 f"Price: ${derivatives_data['price']:.2f} ({derivatives_data['price_24h_change']:+.1f}% 24h)\n"
                 f"OI: ${derivatives_data['oi_usd']/1e6:.1f}M ({derivatives_data['oi_24h_change']:+.1f}%)\n"
                 f"Funding: {derivatives_data['funding_pct']:.3f}% (6h Δ {derivatives_data['funding_6h_change']:+.3f}%)\n"
-                f"L/S: {derivatives_data['ls_ratio']:.2f}\n"
+                f"L/S: {derivatives_data['ls_ratio']:.2f}\n\n"
+                f"MARKET CONTEXT:\n"
+                f"Momentum: {price_momentum.title()}\n"
+                f"OI Trend: {oi_trend.title()}\n"
+                f"Funding Stress: {funding_stress.title()}\n"
                 f"Auto Signal: {features['auto_signal']}\n"
-                f"Confidence: {features['confidence']}/100\n"
-                f"Features: {features['summary']}\n\n"
-                f"{analysis}"
+                f"Confidence: {features['confidence']}/100\n\n"
+                f"ANALYSIS:\n"
+                f"{analysis}\n\n"
+                f"KEY INSIGHTS:\n"
+                f"- Price momentum is {price_momentum} with {oi_trend} open interest\n"
+                f"- Funding stress level: {funding_stress}\n"
+                f"- L/S ratio at {derivatives_data['ls_ratio']:.2f} indicates {'crowded longs' if derivatives_data['ls_ratio'] > 2.5 else 'balanced positioning' if derivatives_data['ls_ratio'] > 1.5 else 'crowded shorts'}\n"
+                f"- Confidence level: {features['confidence']}/100 based on signal alignment"
             )
             
             return structured_analysis
             
-        except Exception:
-            return analysis
+        except Exception as e:
+            print(f"⚠️  Format error: {e}")
+            return f"MARKET DATA:\nPrice: ${derivatives_data.get('price', 0):.2f}\nAnalysis: {analysis}"
 
     # ---------------------------------------------------------------------
     # Main Execution
